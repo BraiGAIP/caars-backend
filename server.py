@@ -15,7 +15,10 @@ import anthropic as anthropic_sdk
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
-mongo_url = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
+_raw_mongo = os.environ.get('MONGO_URL', 'mongodb://localhost:27017')
+if not (_raw_mongo.startswith('mongodb://') or _raw_mongo.startswith('mongodb+srv://')):
+    _raw_mongo = 'mongodb://localhost:27017'
+mongo_url = _raw_mongo
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ.get('DB_NAME', 'caars_db')]
 
