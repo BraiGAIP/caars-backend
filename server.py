@@ -564,6 +564,47 @@ async def update_profile(payload: BusinessProfileUpdate,
     profile = await get_business_profile(user.user_id)
     return profile.dict()
 
+# ---------- CAARS.FI SCRAPE ----------
+@api_router.post("/scrape/caars")
+async def scrape_caars(authorization: Optional[str] = Header(default=None)):
+    """Fetch caars.fi and store extracted text as business knowledge."""
+    user = await get_user_from_token(authorization)
+    import re as _re2
+    urls = ["https://caars.fi", "https://www.caars.fi"]
+    content_parts = []
+    async with httpx.AsyncClient(timeout=20.0, follow_redirects=True) as hx:
+        for url in urls:
+            try:
+                r = await hx.get(url, headers={"User-Agent": "Mozilla/5.0 (compatible; CaarsBot/1.0)"})
+                if r.status_code == 200:
+                    html = r.text
+                    text = _re2.sub(r"<script[^>]*>[\s\S]*?</script>", "", html, flags=_re2.IGNORECASE)
+                    text = _re2.sub(r"<style[^>]*>[\s\S]*?</style>", "", text, flags=_re2.IGNORECASE)
+                    text = _re2.sub(r"<[^>]+>", " ", text)
+                    text = _re2.sub(r"\s{3,}", "\n", text).strip()
+                    if len(text) > 200:
+                        content_parts.append(text[:4000])
+                        break
+            except Exception:
+                continue
+    if not content_parts:
+        raise HTTPException(status_code=502, detail="caars.fi ei vastannut tai sisältö tyhjä")
+    scraped = "\n\n".join(content_parts)
+    summary_resp = await llm_chat(
+        "Olet tiedonpoimija. Saat caars.fi-sivuston tekstisisällön. Tiivistä se 500 sanan selkeäksi kuvaukseksi siitä, mitä Caars.fi-yritys tekee: palvelut, prosessi, automerkit, kohderyhmät, hinnoittelu. Suomeksi.",
+        scraped[:8000],
+    )
+    profile = await get_business_profile(user.user_id)
+    marker = "\n\n[Caars.fi-sivusto haettu automaattisesti]"
+    new_knowledge = (profile.knowledge or "").split(marker)[0].strip() + marker + "\n" + summary_resp
+    await db.business_profiles.update_one(
+        {"user_id": user.user_id},
+        {"$set": {"knowledge": new_knowledge, "updated_at": datetime.now(timezone.utc)}},
+        upsert=True,
+    )
+    return {"ok": True, "summary": summary_resp}
+
+
 # ---------- AUTO-REPLY RULES ----------
 class RuleCreate(BaseModel):
     name: str
@@ -642,12 +683,28 @@ TOOLS_CONNECTED = """1. **gmail_search** — Etsi sähköposteja Gmailista. Näy
    {"type": "gmail_mark_read", "query": "is:unread newer_than:7d", "label": "Vanhat lukemattomat"}
    ```
 
-6. **calendar_list** — Listaa kalenteritapahtumat seuraavilta N päivältä.
+6. **calendar_list** — Listaa kalenteritapahtumat seuraavilta N päivältä. Palauttaa tapahtuma-ID:t hakasulkeissa.
    ```action
    {"type": "calendar_list", "days": 7}
    ```
 
-7. **create_task** — Luo uusi tehtävä. due_at ISO-muodossa UTC:nä.
+7. **calendar_event_delete** (P) — Poista kalenteritapahtuma event_id:llä tai hakusanalla+päivämäärällä.
+   ```action
+   {"type": "calendar_event_delete", "event_id": "abc123", "summary": "Palaveri"}
+   ```
+   TAI haulla: `{"type": "calendar_event_delete", "query": "Palaveri", "date": "2026-06-26"}`
+
+8. **calendar_event_move** (T/H/F/1-5) — Siirrä tapahtumaa päivillä eteenpäin (tai absoluuttisesti).
+   - T = tänään (days=0, move_to_today=true)
+   - H = huomenna (days=1)
+   - F = viikko eteenpäin (days=7)
+   - 1-5 = N päivää eteenpäin
+   ```action
+   {"type": "calendar_event_move", "event_id": "abc123", "days": 1, "summary": "Palaveri"}
+   ```
+   TAI haulla: `{"type": "calendar_event_move", "query": "Palaveri", "date": "2026-06-26", "days": 7}`
+
+9. **create_task** — Luo uusi tehtävä. due_at ISO-muodossa UTC:nä.
    ```action
    {"type": "create_task", "title": "Soita asiakkaalle", "due_at": "2026-06-22T10:00:00Z", "description": ""}
    ```
@@ -733,6 +790,17 @@ GMAIL-HAUN OHJEET (kriittinen):
 - Lisää tarvittaessa `in:anywhere` (haku myös arkistoiduista) tai `newer_than:90d` (vain viime 3 kk).
 - Gmail-haun operaattorit: `from:`, `to:`, `subject:`, `has:attachment`, `is:unread`, `is:read`, `newer_than:7d`, `older_than:1y`, `label:`, `category:`, `in:inbox`, `in:anywhere`.
 - Älä lisää ylimääräisiä lainausmerkkejä `from:`-operaattoriin.
+
+KALENTERIN LYHENTEET (kun käyttäjä mainitsee näitä):
+- **P** = Poista kalenterimerkintä (calendar_event_delete)
+- **T** = Siirrä tähän päivään (calendar_event_move, move_to_today=true)
+- **H** = Siirrä huomiselle (calendar_event_move, days=1)
+- **F** = Siirrä viikkoa eteenpäin samalle viikonpäivälle (calendar_event_move, days=7)
+- **1/2/3/4/5** = Siirrä N päivää eteenpäin (calendar_event_move, days=N)
+
+Esimerkki: "P palaveri 26.6" → etsi tapahtuma nimeltä "palaveri" päivältä 26.6 ja poista se.
+Esimerkki: "H palaveri" → siirrä "palaveri"-niminen tapahtuma huomiselle.
+Jos event_id on tiedossa (calendar_list antoi sen), käytä sitä. Muuten käytä query+date.
 
 Vastaa AINA suomeksi. Pidä vastaukset tiiviinä."""
 
@@ -980,7 +1048,7 @@ async def execute_action(payload: ExecuteActionRequest,
                 end_iso = (datetime.now(timezone.utc) + timedelta(days=days)).isoformat().replace("+00:00", "Z")
                 r = await hx.get(
                     f"{CALENDAR_API}/calendars/primary/events",
-                    params={"timeMin": now_iso, "timeMax": end_iso, "singleEvents": "true", "orderBy": "startTime", "maxResults": 20},
+                    params={"timeMin": now_iso, "timeMax": end_iso, "singleEvents": "true", "orderBy": "startTime", "maxResults": 30},
                     headers=headers_auth,
                 )
                 if r.status_code != 200:
@@ -994,8 +1062,92 @@ async def execute_action(payload: ExecuteActionRequest,
                         start = e.get("start", {}).get("dateTime") or e.get("start", {}).get("date", "")
                         title = e.get("summary", "(nimetön)")
                         loc = e.get("location", "")
-                        lines.append(f"• {start} — {title}" + (f" @ {loc}" if loc else ""))
+                        eid = e.get("id", "")
+                        lines.append(f"• [{eid}] {start} — {title}" + (f" @ {loc}" if loc else ""))
                     result_text = f"Seuraavat {days} päivää ({len(events)} tapahtumaa):\n\n" + "\n".join(lines)
+
+    elif action_type in ("calendar_event_delete", "calendar_event_move"):
+        cal_tokens = await get_calendar_tokens(user.user_id) or await get_email_tokens(user.user_id)
+        if not cal_tokens:
+            raise HTTPException(status_code=400, detail="Kalenteri ei yhdistetty")
+        headers_auth = {"Authorization": f"Bearer {cal_tokens['access_token']}"}
+        event_id = action.get("event_id")
+        query = action.get("query", "")
+        date_str = action.get("date", "")
+
+        async with httpx.AsyncClient(timeout=20.0) as hx:
+            # If no event_id provided, search by query/date
+            if not event_id:
+                search_params: dict = {"singleEvents": "true", "orderBy": "startTime", "maxResults": 10, "q": query}
+                if date_str:
+                    try:
+                        d = datetime.fromisoformat(date_str)
+                        search_params["timeMin"] = d.replace(hour=0, minute=0, second=0, tzinfo=timezone.utc).isoformat().replace("+00:00", "Z")
+                        search_params["timeMax"] = (d.replace(hour=23, minute=59, second=59, tzinfo=timezone.utc)).isoformat().replace("+00:00", "Z")
+                    except Exception:
+                        # Search ±30 days
+                        search_params["timeMin"] = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+                        search_params["timeMax"] = (datetime.now(timezone.utc) + timedelta(days=30)).isoformat().replace("+00:00", "Z")
+                else:
+                    search_params["timeMin"] = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+                    search_params["timeMax"] = (datetime.now(timezone.utc) + timedelta(days=365)).isoformat().replace("+00:00", "Z")
+                sr = await hx.get(f"{CALENDAR_API}/calendars/primary/events", params=search_params, headers=headers_auth)
+                if sr.status_code == 200:
+                    found = sr.json().get("items", [])
+                    if found:
+                        event_id = found[0]["id"]
+                        action["summary"] = found[0].get("summary", query)
+
+            if not event_id:
+                result_text = f"Ei löydetty tapahtumaa haulla '{query}'."
+            elif action_type == "calendar_event_delete":
+                dr = await hx.delete(f"{CALENDAR_API}/calendars/primary/events/{event_id}", headers=headers_auth)
+                label = action.get("summary", event_id)
+                result_text = f"✓ Tapahtuma poistettu: «{label}»." if dr.status_code in (200, 204) else f"Poisto epäonnistui ({dr.status_code})."
+            else:  # calendar_event_move
+                days = int(action.get("days", 1))
+                move_to_today = bool(action.get("move_to_today"))
+                gr = await hx.get(f"{CALENDAR_API}/calendars/primary/events/{event_id}", headers=headers_auth)
+                if gr.status_code != 200:
+                    result_text = f"Tapahtumaa ei löydy ID:llä {event_id}."
+                else:
+                    ev = gr.json()
+                    start = ev.get("start", {})
+                    end = ev.get("end", {})
+                    # Determine duration
+                    if start.get("dateTime"):
+                        s_dt = datetime.fromisoformat(start["dateTime"].replace("Z", "+00:00"))
+                        e_dt = datetime.fromisoformat(end["dateTime"].replace("Z", "+00:00"))
+                        duration = e_dt - s_dt
+                        if move_to_today:
+                            today = datetime.now(timezone.utc).replace(hour=s_dt.hour, minute=s_dt.minute, second=0)
+                            new_s = today
+                        else:
+                            new_s = s_dt + timedelta(days=days)
+                        new_e = new_s + duration
+                        patch = {"start": {"dateTime": new_s.isoformat(), "timeZone": start.get("timeZone", "Europe/Helsinki")},
+                                 "end": {"dateTime": new_e.isoformat(), "timeZone": end.get("timeZone", "Europe/Helsinki")}}
+                    else:
+                        s_date = datetime.fromisoformat(start["date"])
+                        e_date = datetime.fromisoformat(end["date"])
+                        duration_days = (e_date - s_date).days
+                        if move_to_today:
+                            new_s_date = datetime.now(timezone.utc).date()
+                        else:
+                            new_s_date = s_date.date() + timedelta(days=days)
+                        new_e_date = new_s_date + timedelta(days=duration_days)
+                        patch = {"start": {"date": new_s_date.isoformat()}, "end": {"date": new_e_date.isoformat()}}
+                    pr = await hx.patch(
+                        f"{CALENDAR_API}/calendars/primary/events/{event_id}",
+                        headers={**headers_auth, "Content-Type": "application/json"},
+                        json=patch,
+                    )
+                    label = action.get("summary", ev.get("summary", event_id))
+                    if pr.status_code == 200:
+                        new_start = patch.get("start", {}).get("dateTime") or patch.get("start", {}).get("date", "")
+                        result_text = f"✓ Tapahtuma «{label}» siirretty → {new_start[:10]}."
+                    else:
+                        result_text = f"Siirto epäonnistui ({pr.status_code})."
 
     elif action_type == "create_task":
         try:
@@ -1100,21 +1252,24 @@ GMAIL_API = "https://gmail.googleapis.com/gmail/v1/users/me"
 CALENDAR_API = "https://www.googleapis.com/calendar/v3"
 
 
-async def _get_tokens_from_collection(collection, user_id: str) -> Optional[dict]:
-    doc = await collection.find_one({"user_id": user_id}, {"_id": 0})
+async def _get_tokens_from_collection(collection, user_id: str, extra_filter: Optional[dict] = None) -> Optional[dict]:
+    query = {"user_id": user_id}
+    if extra_filter:
+        query.update(extra_filter)
+    doc = await collection.find_one(query, {"_id": 0})
     if not doc:
         return None
     expires_at = doc.get("expires_at")
     if expires_at and expires_at.tzinfo is None:
         expires_at = expires_at.replace(tzinfo=timezone.utc)
     if expires_at and expires_at < datetime.now(timezone.utc) + timedelta(minutes=2):
-        refreshed = await _refresh_token_in_collection(collection, user_id, doc.get("refresh_token", ""))
+        refreshed = await _refresh_token_in_collection(collection, query, doc.get("refresh_token", ""))
         if refreshed:
             doc.update(refreshed)
     return doc
 
 
-async def _refresh_token_in_collection(collection, user_id: str, refresh_token: str) -> Optional[dict]:
+async def _refresh_token_in_collection(collection, query: dict, refresh_token: str) -> Optional[dict]:
     async with httpx.AsyncClient() as hx:
         resp = await hx.post(GOOGLE_TOKEN_URL, data={
             "client_id": GOOGLE_CLIENT_ID,
@@ -1127,12 +1282,33 @@ async def _refresh_token_in_collection(collection, user_id: str, refresh_token: 
     payload = resp.json()
     expires_at = datetime.now(timezone.utc) + timedelta(seconds=payload.get("expires_in", 3500))
     update = {"access_token": payload["access_token"], "expires_at": expires_at}
-    await collection.update_one({"user_id": user_id}, {"$set": update})
+    await collection.update_one(query, {"$set": update})
     return update
 
 
-async def get_email_tokens(user_id: str) -> Optional[dict]:
+async def get_email_tokens(user_id: str, account_label: Optional[str] = None) -> Optional[dict]:
+    if account_label:
+        return await _get_tokens_from_collection(db.google_tokens_email, user_id, {"account_label": account_label})
+    # Return first available email token (any account)
     return await _get_tokens_from_collection(db.google_tokens_email, user_id)
+
+
+async def get_all_email_tokens(user_id: str) -> List[dict]:
+    """Return all connected email account tokens for this user."""
+    cursor = db.google_tokens_email.find({"user_id": user_id}, {"_id": 0})
+    docs = await cursor.to_list(10)
+    result = []
+    for doc in docs:
+        expires_at = doc.get("expires_at")
+        if expires_at and expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        if expires_at and expires_at < datetime.now(timezone.utc) + timedelta(minutes=2):
+            query = {"user_id": user_id, "account_label": doc.get("account_label", "caars")}
+            refreshed = await _refresh_token_in_collection(db.google_tokens_email, query, doc.get("refresh_token", ""))
+            if refreshed:
+                doc.update(refreshed)
+        result.append(doc)
+    return result
 
 
 async def get_calendar_tokens(user_id: str) -> Optional[dict]:
@@ -1145,7 +1321,7 @@ async def get_google_tokens(user_id: str) -> Optional[dict]:
 
 
 async def refresh_google_token(user_id: str, refresh_token: str) -> Optional[dict]:
-    return await _refresh_token_in_collection(db.google_tokens_email, user_id, refresh_token)
+    return await _refresh_token_in_collection(db.google_tokens_email, {"user_id": user_id}, refresh_token)
 
 
 @api_router.get("/google/login-url")
@@ -1179,8 +1355,9 @@ async def google_login_url():
 async def google_connect(
     authorization: Optional[str] = Header(default=None),
     scope_type: str = "email",
+    account_label: str = "caars",
 ):
-    """Connect a Google account. scope_type: 'email' (Gmail/caars.fi) or 'calendar' (brai.fi)."""
+    """Connect a Google account. scope_type: 'email' or 'calendar'. account_label: 'caars'|'brai'|'gmail'."""
     user = await get_user_from_token(authorization)
     if not GOOGLE_CLIENT_ID:
         raise HTTPException(status_code=500, detail="Google not configured")
@@ -1192,6 +1369,7 @@ async def google_connect(
         "state": state,
         "user_id": user.user_id,
         "scope_type": scope_type,
+        "account_label": account_label,
         "created_at": datetime.now(timezone.utc),
     })
     params = {
@@ -1220,6 +1398,7 @@ async def google_callback(code: Optional[str] = None, state: Optional[str] = Non
         return _html_close_page(False, "Tunnistamaton state-parametri")
     user_id = state_doc.get("user_id")
     scope_type = state_doc.get("scope_type", "email")  # "email" or "calendar"
+    account_label = state_doc.get("account_label", "caars")
     await db.google_oauth_states.delete_one({"state": state})
 
     async with httpx.AsyncClient() as hx:
@@ -1267,11 +1446,17 @@ async def google_callback(code: Optional[str] = None, state: Optional[str] = Non
             }
             await db.users.insert_one(new_user)
 
-    token_collection = db.google_tokens_calendar if scope_type == "calendar" else db.google_tokens_email
+    if scope_type == "calendar":
+        token_collection = db.google_tokens_calendar
+        upsert_key = {"user_id": user_id}
+    else:
+        token_collection = db.google_tokens_email
+        upsert_key = {"user_id": user_id, "account_label": account_label}
     await token_collection.update_one(
-        {"user_id": user_id},
+        upsert_key,
         {"$set": {
             "user_id": user_id,
+            "account_label": account_label if scope_type == "email" else None,
             "google_email": google_email,
             "scope_type": scope_type,
             "access_token": payload["access_token"],
@@ -1329,17 +1514,30 @@ def _html_close_page(success: bool, msg: str):
 @api_router.get("/google/status")
 async def google_status(authorization: Optional[str] = Header(default=None)):
     user = await get_user_from_token(authorization)
-    email_doc = await db.google_tokens_email.find_one({"user_id": user.user_id}, {"_id": 0, "access_token": 0, "refresh_token": 0})
+    email_docs = await db.google_tokens_email.find(
+        {"user_id": user.user_id}, {"_id": 0, "access_token": 0, "refresh_token": 0}
+    ).to_list(10)
     cal_doc = await db.google_tokens_calendar.find_one({"user_id": user.user_id}, {"_id": 0, "access_token": 0, "refresh_token": 0})
+    email_accounts = [
+        {
+            "label": d.get("account_label", "caars"),
+            "google_email": d.get("google_email"),
+            "connected_at": d.get("connected_at"),
+        }
+        for d in email_docs
+    ]
+    # Backward-compat fields based on first email doc
+    first_email = email_docs[0] if email_docs else None
     return {
-        "connected": bool(email_doc),
-        "email_connected": bool(email_doc),
-        "email_account": email_doc.get("google_email") if email_doc else None,
-        "email_connected_at": email_doc.get("connected_at") if email_doc else None,
+        "connected": bool(email_docs),
+        "email_connected": bool(email_docs),
+        "email_account": first_email.get("google_email") if first_email else None,
+        "email_connected_at": first_email.get("connected_at") if first_email else None,
+        "email_accounts": email_accounts,
         "calendar_connected": bool(cal_doc),
         "calendar_account": cal_doc.get("google_email") if cal_doc else None,
         "calendar_connected_at": cal_doc.get("connected_at") if cal_doc else None,
-        "last_sync_at": email_doc.get("last_sync_at") if email_doc else None,
+        "last_sync_at": first_email.get("last_sync_at") if first_email else None,
     }
 
 
@@ -1511,14 +1709,18 @@ async def gmail_messages(
 async def google_disconnect(
     authorization: Optional[str] = Header(default=None),
     scope_type: str = "all",
+    account_label: Optional[str] = None,
 ):
     user = await get_user_from_token(authorization)
     if scope_type == "calendar":
         await db.google_tokens_calendar.delete_one({"user_id": user.user_id})
     elif scope_type == "email":
-        await db.google_tokens_email.delete_one({"user_id": user.user_id})
+        query: dict = {"user_id": user.user_id}
+        if account_label:
+            query["account_label"] = account_label
+        await db.google_tokens_email.delete_one(query)
     else:
-        await db.google_tokens_email.delete_one({"user_id": user.user_id})
+        await db.google_tokens_email.delete_many({"user_id": user.user_id})
         await db.google_tokens_calendar.delete_one({"user_id": user.user_id})
     return {"ok": True}
 
@@ -1570,16 +1772,16 @@ def _header(headers: list, name: str) -> str:
 @api_router.post("/google/sync")
 async def google_sync(authorization: Optional[str] = Header(default=None)):
     user = await get_user_from_token(authorization)
-    email_tokens = await get_email_tokens(user.user_id)
+    all_email_tokens = await get_all_email_tokens(user.user_id)
     cal_tokens = await get_calendar_tokens(user.user_id)
-    if not email_tokens and not cal_tokens:
+    if not all_email_tokens and not cal_tokens:
         raise HTTPException(status_code=400, detail="Google ei kytketty")
 
     summary = {"emails_added": 0, "emails_skipped": 0, "events_added": 0, "events_updated": 0}
 
     async with httpx.AsyncClient(timeout=30.0) as hx:
-        # ----- GMAIL (hans@caars.fi) -----
-        if email_tokens:
+        # ----- GMAIL (kaikki yhdistetyt sähköpostitilit) -----
+        for email_tokens in all_email_tokens:
             headers_email = {"Authorization": f"Bearer {email_tokens['access_token']}"}
             list_resp = await hx.get(
                 f"{GMAIL_API}/threads",
@@ -1655,7 +1857,7 @@ async def google_sync(authorization: Optional[str] = Header(default=None)):
                 summary["emails_added"] += 1
 
         # ----- CALENDAR (hans@brai.fi) -----
-        cal_tokens_used = cal_tokens or email_tokens
+        cal_tokens_used = cal_tokens or (all_email_tokens[0] if all_email_tokens else None)
         if cal_tokens_used:
             headers_cal = {"Authorization": f"Bearer {cal_tokens_used['access_token']}"}
             now_iso = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
