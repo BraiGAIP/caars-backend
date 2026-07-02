@@ -1480,7 +1480,7 @@ async def google_callback(code: Optional[str] = None, state: Optional[str] = Non
         }},
         upsert=True,
     )
-    frontend_url = f"http://localhost:3000/?token={session_token}"
+    frontend_url = os.environ.get('FRONTEND_CALLBACK_URL', 'frontend://auth') + f"?token={session_token}"
     return RedirectResponse(url=frontend_url)
 
 
