@@ -176,6 +176,73 @@ async def get_user_from_token(authorization: Optional[str]) -> User:
         raise HTTPException(status_code=401, detail="User not found")
     return User(**user_doc)
 
+CAARS_KEYWORDS = [
+    "caars", "auto", "car", "tuonti", "import", "hinta", "ostaa", "myydä", "myy",
+    "ajoneuvo", "merkki", "malli", "vuosimalli", "tarjous", "tilaus", "vaihto",
+    "käytetty", "uusi auto", "tuoda", "tilata", "kiinnostunut",
+]
+
+def _is_caars_first_contact(email_doc: dict) -> bool:
+    text = ((email_doc.get("subject") or "") + " " + (email_doc.get("body") or "")).lower()
+    return any(kw in text for kw in CAARS_KEYWORDS)
+
+async def _internal_generate_and_send(user_id: str, email_doc: dict, email_tokens: dict):
+    """Generate reply and send via Gmail — no HTTP auth, called internally from sync."""
+    try:
+        profile = await get_business_profile(user_id)
+        rules_cursor = db.auto_reply_rules.find({"user_id": user_id, "enabled": True}, {"_id": 0})
+        rules = await rules_cursor.to_list(100)
+        rules_text = "\n".join([f"- {r['name']}: {r['instruction']}" for r in rules]) or "Ei erillisiä sääntöjä."
+        system = f"""Olet Caars.fi:n asiakaspalveluagentti. Vastaat asiakkaiden ensiyhteydenottoihin automaattisesti.
+Yrityksen tiedot:
+- Nimi: {profile.company_name}
+- Yrittäjä: {profile.owner_name}
+- Liiketoiminta: {profile.company_description}
+
+Tieto-osaaminen:
+{profile.knowledge}
+
+Sävy: {profile.tone}
+
+Erityisohjeet:
+{rules_text}
+
+Allekirjoitus:
+{profile.signature.replace('{owner_name}', profile.owner_name)}
+
+Vastaa AINA suomeksi. Ole lämmin, ammattimainen ja konkreettinen. Kerro lyhyesti mitä Caars.fi tekee ja pyydä asiakas ottamaan yhteyttä tai kysymään lisää."""
+        user_msg = f"""Asiakas: {email_doc['sender_name']} <{email_doc['sender_email']}>
+Aihe: {email_doc['subject']}
+
+Viesti:
+{email_doc['body']}
+
+Kirjoita ammattimainen ensivastaus Caars.fi:n asiakkaalle."""
+        reply_text = await llm_chat(system, user_msg)
+        email_id = email_doc["email_id"]
+        await db.emails.update_one(
+            {"email_id": email_id},
+            {"$set": {"suggested_reply": reply_text, "final_reply": reply_text}},
+        )
+        subject = email_doc["subject"]
+        if not subject.lower().startswith("re:"):
+            subject = f"Re: {subject}"
+        sent = await send_via_gmail(
+            user_id=user_id,
+            to_email=email_doc["sender_email"],
+            subject=subject,
+            body=reply_text,
+            in_reply_to_message_id=email_doc.get("gmail_message_id"),
+            thread_id=email_doc.get("gmail_thread_id"),
+            token_override=email_tokens,
+        )
+        await db.emails.update_one(
+            {"email_id": email_id},
+            {"$set": {"status": "auto_replied", "sent_at": datetime.now(timezone.utc), "sent_via_gmail": sent}},
+        )
+    except Exception as e:
+        print(f"[auto-reply] virhe: {e}")
+
 async def get_business_profile(user_id: str) -> BusinessProfile:
     doc = await db.business_profiles.find_one({"user_id": user_id}, {"_id": 0})
     if not doc:
@@ -468,6 +535,18 @@ async def approve_email(email_id: str, authorization: Optional[str] = Header(def
         }},
     )
     return {"ok": True, "sent_via_gmail": sent_via_gmail}
+
+@api_router.post("/emails/{email_id}/auto-reply")
+async def auto_reply_email(email_id: str, authorization: Optional[str] = Header(default=None)):
+    """Generate reply AND send immediately — called from dashboard 'Botti vastaa' button."""
+    user = await get_user_from_token(authorization)
+    email_doc = await db.emails.find_one({"email_id": email_id, "user_id": user.user_id}, {"_id": 0})
+    if not email_doc:
+        raise HTTPException(status_code=404, detail="Not found")
+    tokens = await db.google_tokens_email.find_one({"user_id": user.user_id}, {"_id": 0})
+    await _internal_generate_and_send(user.user_id, email_doc, tokens or {})
+    updated = await db.emails.find_one({"email_id": email_id}, {"_id": 0})
+    return {"ok": True, "suggested_reply": (updated or {}).get("suggested_reply", ""), "status": (updated or {}).get("status")}
 
 @api_router.post("/emails/{email_id}/skip")
 async def skip_email(email_id: str, authorization: Optional[str] = Header(default=None)):
@@ -1855,6 +1934,10 @@ async def google_sync(authorization: Optional[str] = Header(default=None)):
                 doc["gmail_thread_id"] = tid
                 await db.emails.insert_one(doc)
                 summary["emails_added"] += 1
+                # Auto-reply Caars first contacts
+                if _is_caars_first_contact(doc):
+                    import asyncio
+                    asyncio.create_task(_internal_generate_and_send(user.user_id, doc, email_tokens))
 
         # ----- CALENDAR (hans@brai.fi) -----
         cal_tokens_used = cal_tokens or (all_email_tokens[0] if all_email_tokens else None)
@@ -1913,8 +1996,9 @@ async def google_sync(authorization: Optional[str] = Header(default=None)):
 
 async def send_via_gmail(user_id: str, to_email: str, subject: str, body: str,
                          in_reply_to_message_id: Optional[str] = None,
-                         thread_id: Optional[str] = None) -> bool:
-    tokens = await get_google_tokens(user_id)
+                         thread_id: Optional[str] = None,
+                         token_override: Optional[dict] = None) -> bool:
+    tokens = token_override or await get_google_tokens(user_id)
     if not tokens:
         return False
     msg = PyEmailMessage()
