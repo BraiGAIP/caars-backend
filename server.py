@@ -620,6 +620,16 @@ async def delete_task(task_id: str, authorization: Optional[str] = Header(defaul
     return {"ok": True}
 
 # ---------- BUSINESS PROFILE ----------
+class Brand(BaseModel):
+    brand_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    name: str  # display name, e.g. "CAARS.fi"
+    company_name: str = ""
+    company_description: str = ""
+    tone: str = "Ammatillinen, ystävällinen, suomeksi."
+    signature: str = ""
+    knowledge: str = ""
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
 class BusinessProfileUpdate(BaseModel):
     owner_name: Optional[str] = None
     company_name: Optional[str] = None
@@ -647,6 +657,46 @@ async def update_profile(payload: BusinessProfileUpdate,
     )
     profile = await get_business_profile(user.user_id)
     return profile.dict()
+
+# ---------- BRANDS ----------
+@api_router.get("/business-profile/brands")
+async def list_brands(authorization: Optional[str] = Header(default=None)):
+    user = await get_user_from_token(authorization)
+    doc = await db.business_profiles.find_one({"user_id": user.user_id}, {"_id": 0, "brands": 1})
+    brands = doc.get("brands", []) if doc else []
+    return {"brands": brands}
+
+@api_router.post("/business-profile/brands")
+async def create_brand(payload: Brand, authorization: Optional[str] = Header(default=None)):
+    user = await get_user_from_token(authorization)
+    brand = Brand(**payload.dict())
+    brand.brand_id = str(uuid.uuid4())
+    await db.business_profiles.update_one(
+        {"user_id": user.user_id},
+        {"$push": {"brands": brand.dict()}},
+        upsert=True,
+    )
+    return brand.dict()
+
+@api_router.put("/business-profile/brands/{brand_id}")
+async def update_brand(brand_id: str, payload: Brand,
+                       authorization: Optional[str] = Header(default=None)):
+    user = await get_user_from_token(authorization)
+    update_fields = {f"brands.$.{k}": v for k, v in payload.dict(exclude={"brand_id", "created_at"}).items()}
+    await db.business_profiles.update_one(
+        {"user_id": user.user_id, "brands.brand_id": brand_id},
+        {"$set": update_fields},
+    )
+    return {"ok": True}
+
+@api_router.delete("/business-profile/brands/{brand_id}")
+async def delete_brand(brand_id: str, authorization: Optional[str] = Header(default=None)):
+    user = await get_user_from_token(authorization)
+    await db.business_profiles.update_one(
+        {"user_id": user.user_id},
+        {"$pull": {"brands": {"brand_id": brand_id}}},
+    )
+    return {"ok": True}
 
 # ---------- CAARS.FI SCRAPE ----------
 @api_router.post("/scrape/caars")
@@ -824,6 +874,21 @@ async def chat_with_assistant(payload: ChatRequest,
         or await db.google_tokens_calendar.find_one({"user_id": user.user_id}, {"_id": 0}) is not None
     )
 
+    # Brands context
+    profile_doc = await db.business_profiles.find_one({"user_id": user.user_id}, {"_id": 0, "brands": 1})
+    brands: list = profile_doc.get("brands", []) if profile_doc else []
+    brands_str = ""
+    if brands:
+        brands_str = "\n\nMUUT BRÄNDIT / YRITYKSET:\n"
+        for b in brands:
+            brands_str += f"\n--- {b.get('name', b.get('company_name', ''))} ---\n"
+            if b.get("company_description"):
+                brands_str += f"Kuvaus: {b['company_description']}\n"
+            if b.get("knowledge"):
+                brands_str += f"Tietämys: {b['knowledge']}\n"
+            if b.get("tone"):
+                brands_str += f"Sävy: {b['tone']}\n"
+
     # Recent context
     today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
     upcoming = await db.tasks.find(
@@ -845,7 +910,7 @@ Yrittäjä: {profile.owner_name}.
 
 Yrityksen kuvaus:
 {profile.company_description}
-
+{brands_str}
 Tietämys:
 {profile.knowledge}
 
