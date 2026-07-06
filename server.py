@@ -2032,10 +2032,7 @@ async def google_sync(authorization: Optional[str] = Header(default=None)):
                 doc["gmail_thread_id"] = tid
                 await db.emails.insert_one(doc)
                 summary["emails_added"] += 1
-                # Auto-reply Caars first contacts
-                if _is_caars_first_contact(doc):
-                    import asyncio
-                    asyncio.create_task(_internal_generate_and_send(user.user_id, doc, email_tokens))
+                # AUTO-REPLY DISABLED — manually re-enable when ready
 
         # ----- CALENDAR (hans@brai.fi) -----
         cal_tokens_used = cal_tokens or (all_email_tokens[0] if all_email_tokens else None)
