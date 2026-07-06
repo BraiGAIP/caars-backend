@@ -106,6 +106,15 @@ class AutoReplyRule(BaseModel):
     enabled: bool = True
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
+class ReplyTemplate(BaseModel):
+    template_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    name: str
+    trigger_description: str = ""  # "Kun asiakas kysyy etsintäpalvelusta"
+    template_text: str
+    enabled: bool = True
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
 class EmailMessage(BaseModel):
     email_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     user_id: str
@@ -767,6 +776,43 @@ async def delete_rule(rule_id: str, authorization: Optional[str] = Header(defaul
     await db.auto_reply_rules.delete_one({"rule_id": rule_id, "user_id": user.user_id})
     return {"ok": True}
 
+# ---------- REPLY TEMPLATES ----------
+class TemplateCreate(BaseModel):
+    name: str
+    trigger_description: str = ""
+    template_text: str
+    enabled: bool = True
+
+@api_router.get("/reply-templates")
+async def list_templates(authorization: Optional[str] = Header(default=None)):
+    user = await get_user_from_token(authorization)
+    cursor = db.reply_templates.find({"user_id": user.user_id}, {"_id": 0}).sort("created_at", 1)
+    items = await cursor.to_list(50)
+    return {"items": items}
+
+@api_router.post("/reply-templates")
+async def create_template(payload: TemplateCreate, authorization: Optional[str] = Header(default=None)):
+    user = await get_user_from_token(authorization)
+    tmpl = ReplyTemplate(user_id=user.user_id, **payload.dict())
+    await db.reply_templates.insert_one(tmpl.dict())
+    return {k: v for k, v in tmpl.dict().items() if k != "user_id"}
+
+@api_router.put("/reply-templates/{template_id}")
+async def update_template(template_id: str, payload: TemplateCreate,
+                          authorization: Optional[str] = Header(default=None)):
+    user = await get_user_from_token(authorization)
+    await db.reply_templates.update_one(
+        {"template_id": template_id, "user_id": user.user_id},
+        {"$set": payload.dict()},
+    )
+    return {"ok": True}
+
+@api_router.delete("/reply-templates/{template_id}")
+async def delete_template(template_id: str, authorization: Optional[str] = Header(default=None)):
+    user = await get_user_from_token(authorization)
+    await db.reply_templates.delete_one({"template_id": template_id, "user_id": user.user_id})
+    return {"ok": True}
+
 # ---------- ASSISTANT CHAT ----------
 import re as _re
 import json as _json
@@ -889,6 +935,20 @@ async def chat_with_assistant(payload: ChatRequest,
             if b.get("tone"):
                 brands_str += f"Sävy: {b['tone']}\n"
 
+    # Reply templates
+    templates_cursor = db.reply_templates.find(
+        {"user_id": user.user_id, "enabled": True}, {"_id": 0}
+    ).sort("created_at", 1)
+    templates = await templates_cursor.to_list(20)
+    templates_str = ""
+    if templates:
+        templates_str = "\n\nVASTAUSMALLIPOHJAT (käytä näitä kun generoit sähköpostivastausta):\n"
+        for t in templates:
+            templates_str += f"\n### {t['name']}"
+            if t.get("trigger_description"):
+                templates_str += f" — KÄYTÄ KUN: {t['trigger_description']}"
+            templates_str += f"\n{t['template_text']}\n"
+
     # Recent context
     today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
     upcoming = await db.tasks.find(
@@ -913,7 +973,7 @@ Yrityksen kuvaus:
 {brands_str}
 Tietämys:
 {profile.knowledge}
-
+{templates_str}
 Tämänhetkinen tilanne:
 - Tulossa olevat tehtävät:
 {upcoming_str}
