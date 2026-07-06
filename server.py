@@ -1899,7 +1899,7 @@ async def google_sync(authorization: Optional[str] = Header(default=None)):
             headers_email = {"Authorization": f"Bearer {email_tokens['access_token']}"}
             list_resp = await hx.get(
                 f"{GMAIL_API}/threads",
-                params={"q": "in:inbox newer_than:14d -from:me category:primary", "maxResults": 25},
+                params={"q": "in:inbox newer_than:30d -from:me", "maxResults": 50},
                 headers=headers_email,
             )
             if list_resp.status_code != 200:
@@ -1918,10 +1918,8 @@ async def google_sync(authorization: Optional[str] = Header(default=None)):
                 th_data = th_resp.json()
                 messages = th_data.get("messages", [])
                 is_first_email = len(messages) == 1
-                if not is_first_email:
-                    summary["emails_skipped"] += 1
-                    continue
-                msg_id = messages[0]["id"]
+                # Use the latest message in thread
+                msg_id = messages[-1]["id"]
                 existing = await db.emails.find_one(
                     {"user_id": user.user_id, "gmail_message_id": msg_id}, {"_id": 0}
                 )
