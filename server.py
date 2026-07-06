@@ -31,13 +31,18 @@ db = client[os.environ.get('DB_NAME', 'caars_db')]
 ANTHROPIC_API_KEY = os.environ['ANTHROPIC_API_KEY']
 EMERGENT_AUTH_URL = "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data"
 
-async def llm_chat(system_message: str, user_message: str) -> str:
+async def llm_chat(system_message: str, user_message: str, history: list | None = None) -> str:
     aclient = anthropic_sdk.AsyncAnthropic(api_key=ANTHROPIC_API_KEY)
+    messages = []
+    if history:
+        for h in history:
+            messages.append({"role": h["role"], "content": h["content"]})
+    messages.append({"role": "user", "content": user_message})
     msg = await aclient.messages.create(
         model="claude-sonnet-4-6",
         max_tokens=2048,
         system=system_message,
-        messages=[{"role": "user", "content": user_message}],
+        messages=messages,
     )
     return msg.content[0].text
 
@@ -762,9 +767,12 @@ TOOLS_CONNECTED = """1. **gmail_search** — Etsi sähköposteja Gmailista. Näy
    {"type": "gmail_mark_read", "query": "is:unread newer_than:7d", "label": "Vanhat lukemattomat"}
    ```
 
-6. **calendar_list** — Listaa kalenteritapahtumat seuraavilta N päivältä. Palauttaa tapahtuma-ID:t hakasulkeissa.
+6. **calendar_list** — Listaa kalenteritapahtumat. Tukee sekä tulevia että menneitä tapahtumia.
+   - Tulevat tapahtumat: `{"type": "calendar_list", "days": 7}`
+   - Menneet tapahtumat: `{"type": "calendar_list", "days": 0, "days_back": 30}`
+   - Molemmat suunnat: `{"type": "calendar_list", "days": 7, "days_back": 30}`
    ```action
-   {"type": "calendar_list", "days": 7}
+   {"type": "calendar_list", "days": 7, "days_back": 0}
    ```
 
 7. **calendar_event_delete** (P) — Poista kalenteritapahtuma event_id:llä tai hakusanalla+päivämäärällä.
@@ -884,11 +892,34 @@ Jos event_id on tiedossa (calendar_list antoi sen), käytä sitä. Muuten käyt�
 Vastaa AINA suomeksi. Pidä vastaukset tiiviinä."""
 
     user_text = payload.message
+
+    # Load last 20 messages as history (Claude requires strict user/assistant alternation)
+    history_cursor = db.chat_messages.find(
+        {"user_id": user.user_id},
+        {"_id": 0, "role": 1, "content": 1}
+    ).sort("created_at", -1).limit(20)
+    history_raw = await history_cursor.to_list(20)
+    history_raw.reverse()
+    # Build alternating history — merge consecutive same-role messages
+    history: list = []
+    for h in history_raw:
+        role = h.get("role")
+        if role not in ("user", "assistant"):
+            continue
+        content = h.get("content", "")
+        if history and history[-1]["role"] == role:
+            history[-1]["content"] += "\n" + content
+        else:
+            history.append({"role": role, "content": content})
+    # Must start with user message for Claude
+    while history and history[0]["role"] != "user":
+        history.pop(0)
+
     await db.chat_messages.insert_one(
         ChatMessage(user_id=user.user_id, role="user", content=user_text).dict()
     )
 
-    response = await llm_chat(system, user_text)
+    response = await llm_chat(system, user_text, history=history)
 
     clean_text, action = _extract_action(response)
     if not clean_text and action:
@@ -1123,18 +1154,22 @@ async def execute_action(payload: ExecuteActionRequest,
 
             elif action_type == "calendar_list":
                 days = int(action.get("days", 7))
-                now_iso = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-                end_iso = (datetime.now(timezone.utc) + timedelta(days=days)).isoformat().replace("+00:00", "Z")
+                days_back = int(action.get("days_back", 0))
+                start_dt = datetime.now(timezone.utc) - timedelta(days=days_back)
+                end_dt = datetime.now(timezone.utc) + timedelta(days=days)
+                start_iso = start_dt.isoformat().replace("+00:00", "Z")
+                end_iso = end_dt.isoformat().replace("+00:00", "Z")
                 r = await hx.get(
                     f"{CALENDAR_API}/calendars/primary/events",
-                    params={"timeMin": now_iso, "timeMax": end_iso, "singleEvents": "true", "orderBy": "startTime", "maxResults": 30},
+                    params={"timeMin": start_iso, "timeMax": end_iso, "singleEvents": "true", "orderBy": "startTime", "maxResults": 50},
                     headers=headers_auth,
                 )
                 if r.status_code != 200:
                     raise HTTPException(status_code=500, detail=f"Kalenteri-haku epäonnistui: {r.text[:200]}")
                 events = r.json().get("items", [])
+                period_label = f"edellinen {days_back} + seuraavat {days} päivää" if days_back else f"seuraavat {days} päivää"
                 if not events:
-                    result_text = f"Ei tapahtumia seuraavan {days} päivän aikana."
+                    result_text = f"Ei tapahtumia ajanjaksolla: {period_label}."
                 else:
                     lines = []
                     for e in events:
@@ -1143,7 +1178,7 @@ async def execute_action(payload: ExecuteActionRequest,
                         loc = e.get("location", "")
                         eid = e.get("id", "")
                         lines.append(f"• [{eid}] {start} — {title}" + (f" @ {loc}" if loc else ""))
-                    result_text = f"Seuraavat {days} päivää ({len(events)} tapahtumaa):\n\n" + "\n".join(lines)
+                    result_text = f"Kalenteri — {period_label} ({len(events)} tapahtumaa):\n\n" + "\n".join(lines)
 
     elif action_type in ("calendar_event_delete", "calendar_event_move"):
         cal_tokens = await get_calendar_tokens(user.user_id) or await get_email_tokens(user.user_id)
