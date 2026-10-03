@@ -27,7 +27,7 @@ Automatic reply during inbox synchronization is disabled in code. Preserve that 
 
 Editor: https://lovable.dev/projects/7e00d027-e019-4070-a93a-d6789b55bd24
 
-Verified website baseline: `13b0120d6c81535a9bfa7f3b2aad200a287bffe4`. React 18/Vite/TypeScript, Tailwind/shadcn, React Router; Lovable Cloud/Supabase PostgreSQL and Deno functions. Supabase reference `cpmiqrrukdntypgflrdq`. Website GitHub remote has not been verified. Do not imply this backend repository is automatically synchronized with the website.
+Verified website baseline: `13b0120d6c81535a9bfa7f3b2aad200a287bffe4`. React 18/Vite/TypeScript, Tailwind/shadcn, React Router; Lovable Cloud/Supabase PostgreSQL and Deno functions. Supabase reference `cpmiqrrukdntypgflrdq`. Lovable Git settings identify `https://github.com/venturecore/caars-bright-spark.git`, branch `main`, as connected and in sync at inspection. The local BraiGAIP GitHub account cannot read/clone this private repository (repository not found); Lovable remains the authorized website edit/sync surface. Do not imply this backend repository is automatically synchronized with the website.
 
 ### Website payment architecture under repair
 

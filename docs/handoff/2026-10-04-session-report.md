@@ -46,3 +46,9 @@ Status at creation: implementation running; no completed fixes, tests, deploymen
 - Record real test output and commit SHAs, distinguish preview/source/backend deployment/public publication.
 - Obtain actual GitHub remote and actual Caars Stripe account before claiming sync or reconciliation.
 - Cover concurrent duplicates, two orders/same buyer, first-time buyer, rollback/retry and delayed payments.
+
+## Repository and credit follow-up
+
+- User supplied `BraiGAIP/caars-backend`; inspected source confirms it is the assistant backend. Companion architecture/state/handoff committed and pushed there at `1a105819691b7c663b2f6b20ce08ba2967f44d56`; GitHub remote main SHA verified equal.
+- Lovable Settings → Git → GitHub identifies actual website repo `venturecore/caars-bright-spark`, branch main, Connected / In sync. Local BraiGAIP CLI access fails repository-not-found; do not replace its remote or overwrite assistant backend with website source.
+- Lovable UI showed 602 credits remaining. No new credits needed/purchased.

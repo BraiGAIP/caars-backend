@@ -16,7 +16,7 @@ Updated 2026-10-04. Start with ARCHITECTURE.md to distinguish this assistant bac
 - Gate duplicate delivery side effects; recover missed notifications safely.
 - Signed webhook updates paid deposits even when browser is closed; pending/failed UI makes no success promise.
 - Identify actual Caars live Stripe account and endpoint, investigate 17 failures, reconcile paginated paid sessions/orders/tasks.
-- Identify actual website GitHub remote; verify its commits and push separately from this backend.
+- Verify website commit synchronization to `venturecore/caars-bright-spark` main through Lovable; local BraiGAIP account cannot access that private repository.
 
 ## P1 — requested implementation running, not yet validated
 
@@ -36,3 +36,5 @@ Updated 2026-10-04. Start with ARCHITECTURE.md to distinguish this assistant bac
 ## Current handoff
 
 Lovable request: `umsg_01m41trz9jf9da5swrtzbtn7ng`, thread `main`. Baseline website SHA `13b0120d6c81535a9bfa7f3b2aad200a287bffe4`. No completed implementation, tests, backend deployment, public publication or website GitHub push claimed at this point.
+
+Lovable UI verified connected/in-sync website repository `venturecore/caars-bright-spark` main. UI showed 602 existing credits; no purchase needed. Initial companion documentation pushed to this backend repository as `1a105819691b7c663b2f6b20ce08ba2967f44d56`, remote SHA verified.
