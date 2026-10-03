@@ -1,0 +1,48 @@
+# Caars.fi — 2026-10-04 session report
+
+## Initial verified state
+
+- This Drive workspace is documentation, not a Git checkout.
+- Actual React application is Lovable project `7e00d027-e019-4070-a93a-d6789b55bd24`, baseline commit `13b0120d6c81535a9bfa7f3b2aad200a287bffe4`.
+- `BraiGAIP/caars-backend` is a separate Python application, not the website repository. Actual website GitHub remote remains unidentified; user was asked for its URL.
+- No new credits purchased. Existing credits only, no Max mode.
+- Three parallel audits used the local `msitarzewski/agency-agents` role definitions. Some requested names do not exist: backend/software architect and growth hacker cover the corresponding responsibilities.
+
+## Verified P0 findings
+
+- `supabase/functions/stripe-webhook/index.ts` returns 200 even on database errors or its eight-second timeout, suppressing Stripe retries.
+- Session uniqueness prevents duplicate orders but does not prevent repeated email/admin/CAPI effects.
+- Paid-order trigger needs an existing CRM contact before webhook creates it; new buyers can miss delivery tasks.
+- Task deduplication by contact/case/title merges distinct orders from the same buyer. Require an order foreign key and unique task invariant.
+- PaymentSuccess pending screen incorrectly shows success styling and an order-confirmed heading.
+- Deposit metadata is not recognized by webhook; deposit status depends on browser verification. Verification can repeat emails and stamp success after email failure.
+- Exposed Stripe account BRAI `acct_1TRdiqE0dI2e9F1o` has only webhook endpoints for other projects, not Caars. Reported 17 failed attempts and payment reconciliation NOT verified. Do not alter those unrelated endpoints.
+
+## Verified UI/chat findings
+
+- Homepage has two action cards, no service inputs or service-page navigation.
+- Global theme is dark and public components contain hardcoded dark backgrounds/white text.
+- Shared chat does not pass service context to either backend.
+- Vehicle-link shortcut bypasses backend and always offers Perusselvitys, including German listings.
+- `chatCtaActions.ts` exposes vehicle URL through `?auto=`. Replace with guarded, expiring, per-service session state.
+- Primary Claude prompt omits TuontiApu 250 EUR and includes obsolete 99 EUR. Shared price JSON already has requested prices.
+- Autohalli knowledge text overpromises financing; rewrite conditionally and clarify direct import accepts no trade-ins.
+
+## Work dispatched
+
+Implementation requested in the existing Lovable application, message `umsg_01m41trz9jf9da5swrtzbtn7ng`, thread `main`:
+
+1. Repository architecture/state/handoff documents before edits.
+2. Durable paid-order/task persistence, retryable errors, idempotent side effects and recovery verification.
+3. Six light service cards with session-only state, service bots and summaries/FAQ/SEO.
+4. Build/unit/browser validation, modular commits and verified GitHub sync where accessible.
+
+Status at creation: implementation running; no completed fixes, tests, deployment or GitHub push claimed yet. This file is a local audit copy; the actual application repository must receive and maintain its own documents.
+
+## Required next verification
+
+- Read completion response and actual diff; audit SQL atomicity/security and both chat endpoints.
+- Verify preview card navigation, refresh/back and clean URLs; check contrast and metadata.
+- Record real test output and commit SHAs, distinguish preview/source/backend deployment/public publication.
+- Obtain actual GitHub remote and actual Caars Stripe account before claiming sync or reconciliation.
+- Cover concurrent duplicates, two orders/same buyer, first-time buyer, rollback/retry and delayed payments.
