@@ -33,7 +33,9 @@ Verified website baseline: `13b0120d6c81535a9bfa7f3b2aad200a287bffe4`. React 18/
 
 `create-checkout` / `create-deposit-checkout` create server-priced Stripe sessions. Signed `stripe-webhook` is the paid-status authority. `orders.stripe_session_id` is unique. CRM and `control_center_tasks` provide fulfillment; deposits use `commitment_deposits`. Existing task trigger can miss new buyers and merge separate orders. Intended invariant: durable paid order and exactly one order-linked task atomically, retryable failures and recoverable side effects. Document implemented migration/RPC details only after reviewing the actual website diff.
 
-Codex's exposed BRAI Stripe account has webhook destinations for other projects. Caars production account, endpoint error logs and the reported 17 failures remain unverified; never repair a similarly named unrelated integration.
+Codex's exposed BRAI Stripe account has webhook destinations for other projects and was left untouched. Lovable's project-connected tools verified the Caars Autotuontiliike live account and enabled Caars checkout webhook. All 18 paid Checkout Sessions match 18 stored orders; pagination was exhausted. Historical logs for the reported 17 failed deliveries were unavailable, so their original cause remains unverified.
+
+Website phase-one commit `0b134658a13a11e9ee40603eebc35ff02f31f7a7` adds a unique `control_center_tasks.order_id` and an atomic paid-order trigger, plus a side-effect claim. Independent review found notification and claim-ownership gaps; further repairs are queued. The archived phase-one diff is evidence of an intermediate implementation, not proof that the entire P0 is complete.
 
 ## Handoff protocol
 
