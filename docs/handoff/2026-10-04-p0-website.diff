@@ -1,0 +1,601 @@
+--- /dev/null
++++ b/AGENTS.md
+@@ -0,0 +1,1 @@
++- Paid-order fulfillment: one control_center_tasks row per order (unique order_id) created by DB trigger in the order transaction; stripe-webhook side effects run only after `claim_order_side_effects` and failures return 5xx — so retries never duplicate or lose fulfillment.
+
+--- /dev/null
++++ b/docs/ARCHITECTURE.md
+@@ -0,0 +1,26 @@
++# Caars.fi — Architecture (verified 2026-10-03)
++
++## Stack
++- Frontend: React 18 + Vite SPA (`src/`), prerender for SEO (`scripts/prerender.mjs`), Cloudflare Worker in front of caars.fi (`cloudflare-worker/`).
++- Backend: Lovable Cloud (one instance serves preview and production). Edge functions in `supabase/functions/`.
++- Git: Lovable-managed repository (remote `origin` = Lovable internal git storage, plus an S3 mirror). No GitHub remote is configured in this sandbox. Commits are created by the Lovable platform, not by the agent.
++
++## Payment routing (VERIFIED)
++- Stripe account: "Caars Autotuontiliike" (connected to this project). This is NOT the BRAI account seen in Codex.
++- Live webhook endpoint → `functions/v1/stripe-webhook`, status enabled, events: `checkout.session.completed`, `async_payment_succeeded`, `async_payment_failed`, `expired`.
++- `create-checkout`: server-side `PRICE_CATALOG` (client prices ignored). 79 € Perusselvitys / Etsintäpalvelu, 99 € Etsintäpalvelu +, 250 € TuontiApu, 1 290 € Avaimet käteen.
++- `verify-checkout-session`: success page only trusts a server-verified paid session; delayed methods → pending.
++
++## stripe-webhook flow (2026-10-03)
++1. Raw body + `stripe-signature` verified (`constructEventAsync`); missing/invalid → 400.
++2. `async_payment_failed` → logged, 200, no order/task. Other non-checkout events → 200.
++3. Unpaid `completed` → no order. Paid `completed` or `async_payment_succeeded` →
++4. Insert `orders` (unique `stripe_session_id`). AFTER INSERT trigger `cc_trigger_order_paid` → `cc_ensure_order_task` creates contact (if missing), case and exactly one task per order (`control_center_tasks.order_id` unique) in the same transaction.
++5. Duplicate delivery (23505) → load existing order, re-ensure task.
++6. `claim_order_side_effects` atomically claims emails/CRM/CAPI/admin notify for one delivery. Done → `side_effects_status='done'`. Failure → reset to `pending`, respond 503 so Stripe retries. Resend calls send `Idempotency-Key` per session.
++7. Any critical persistence error → 5xx (retryable). No detached background work, no timeout-based 200.
++
++## Key tables
++- `orders`: payment state (`status`), internal follow-up (`followup_status`), side-effect outbox (`side_effects_*`).
++- `control_center_tasks.order_id`: one fulfillment task per paid order.
++- Admin RPC `cc_reconcile_order_tasks(p_apply)`: dry-run/apply tasks for paid orders without one.
+
+--- /dev/null
++++ b/docs/STATE.md
+@@ -0,0 +1,14 @@
++# Caars.fi — State (2026-10-03)
++
++## Done (VERIFIED)
++- P0 stripe-webhook: retryable 5xx on persistence errors, exclusive side-effect claim, Resend idempotency, async failure handled. Deployed; unsigned/forged requests → 400.
++- P0 per-order fulfillment task (unique order_id, first-time buyer gets contact+task in the order transaction). Rolled-back DB self-test passed: 2 orders same new buyer → 2 tasks; retry no duplicate; duplicate session rejected; side-effect claim exclusive.
++- Stripe reconciliation: 18 paid live Checkout Sessions in Caars account = 18 rows in `orders` (no missing orders).
++
++## Open
++- P1: 18 existing paid orders have no per-order task (old tasks were per contact). Not auto-created to avoid flooding the queue with already-handled orders. Admin decision: run `cc_reconcile_order_tasks(false)` then `(true)`.
++- P1: Cause of the 17 failed deliveries not verifiable — function logs from that window are not available. Endpoint is currently enabled.
++- P1: Real Klarna/delayed payment end-to-end not tested.
++- P1 (not started): homepage six service cards with session-local handoff, light theme for whole public site, service-context chatbots, SEO summaries/FAQ/JSON-LD for six routes, `/rahoitus-ja-vaihtoauto`.
++- P2: Tuontipalvelu Germany "from 1 990 €" — checkout has only 1 290 € SKU; needs decision whether Germany is paid via checkout at all.
++- Git: no GitHub remote in sandbox; push cannot be verified from here.
+
+--- /dev/null
++++ b/docs/handoff/2026-10-04-session-report.md
+@@ -0,0 +1,23 @@
++# Session report 2026-10-03/04
++
++## Initial state (before edits)
++- HEAD `13b0120d` ("Fixed display for pending pay."). Remotes: Lovable internal git + S3 mirror; no GitHub remote.
++- stripe-webhook always returned 200 (8 s race + waitUntil), side effects gated only by 23505 on CRM.
++- `cc_trigger_order_paid` looked up CRM contact before the webhook created it; tasks deduped per contact/type.
++- DB: 18 paid orders, 4 `order_paid_trigger` tasks.
++
++## Changes
++- Migration `order_fulfillment_task_and_outbox`: `control_center_tasks.order_id` (unique), `orders.side_effects_*`, functions `cc_ensure_order_task`, `claim_order_side_effects`, `cc_reconcile_order_tasks`, new `cc_trigger_order_paid`. Existing orders marked side-effects `done` (no re-sends).
++- `supabase/functions/stripe-webhook/index.ts` rewritten flow (see ARCHITECTURE.md). Deployed.
++- Docs: ARCHITECTURE.md, STATE.md, this report; AGENTS.md rule; roadmap.
++
++## Tests (actual)
++- curl: no signature → 400; invalid signature → 400.
++- DB self-test in rolled-back transaction: passed (2 orders/1 new buyer, retry, duplicate, claim).
++- Stripe: account Caars Autotuontiliike, endpoint enabled with 4 checkout events; 18 paid sessions ↔ 18 orders.
++- Not run: frontend build check, browser smoke tests (no frontend changes this session).
++
++## Final state
++- Commit SHAs: created by the Lovable platform after this turn; not verifiable by the agent. No GitHub push proven.
++- Backend changes are live (shared instance). Frontend unchanged; nothing published.
++- Remaining: see STATE.md "Open".
+
+--- /dev/null
++++ b/drizzle.config.ts
+@@ -0,0 +1,10 @@
++import { defineConfig } from "drizzle-kit";
++
++export default defineConfig({
++  dialect: "postgresql",
++  schema: "./drizzle/schema.ts",
++  out: "./drizzle/migrations",
++  dbCredentials: {
++    url: process.env.LOVABLE_DB_MIGRATION_URL ?? "",
++  },
++});
+
+--- /dev/null
++++ b/drizzle/migrations/0000_order_fulfillment_task_and_outbox.sql
+@@ -0,0 +1,105 @@
++-- One durable fulfillment task per paid ORDER + side-effect claim (outbox) on orders.
++ALTER TABLE public.control_center_tasks ADD COLUMN IF NOT EXISTS order_id uuid REFERENCES public.orders(id) ON DELETE SET NULL;
++CREATE UNIQUE INDEX IF NOT EXISTS control_center_tasks_order_id_key ON public.control_center_tasks(order_id) WHERE order_id IS NOT NULL;
++
++ALTER TABLE public.orders
++  ADD COLUMN IF NOT EXISTS side_effects_status text NOT NULL DEFAULT 'pending',
++  ADD COLUMN IF NOT EXISTS side_effects_claimed_at timestamptz,
++  ADD COLUMN IF NOT EXISTS side_effects_done_at timestamptz,
++  ADD COLUMN IF NOT EXISTS side_effects_attempts integer NOT NULL DEFAULT 0,
++  ADD COLUMN IF NOT EXISTS side_effects_last_error text;
++
++-- Existing orders were already processed by the old webhook: mark them done so nothing re-sends.
++UPDATE public.orders SET side_effects_status = 'done', side_effects_done_at = COALESCE(side_effects_done_at, created_at)
++ WHERE side_effects_status = 'pending' AND created_at < now();
++
++-- Creates (contact if missing) + case + exactly one task for a paid order. Idempotent.
++CREATE OR REPLACE FUNCTION public.cc_ensure_order_task(p_order_id uuid)
++RETURNS uuid LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $$
++DECLARE
++  o public.orders;
++  v_contact uuid;
++  v_case uuid;
++  v_task uuid;
++BEGIN
++  SELECT * INTO o FROM public.orders WHERE id = p_order_id;
++  IF o.id IS NULL OR o.status <> 'paid' THEN RETURN NULL; END IF;
++
++  SELECT id INTO v_task FROM public.control_center_tasks WHERE order_id = o.id;
++  IF v_task IS NOT NULL THEN RETURN v_task; END IF;
++
++  v_contact := o.contact_id;
++  IF v_contact IS NULL AND NULLIF(btrim(o.customer_email), '') IS NOT NULL THEN
++    SELECT id INTO v_contact FROM public.crm_contacts WHERE lower(email) = lower(btrim(o.customer_email)) ORDER BY created_at LIMIT 1;
++    IF v_contact IS NULL THEN
++      INSERT INTO public.crm_contacts (source, source_detail, full_name, email)
++      VALUES ('checkout', 'Stripe-maksu', o.customer_name, lower(btrim(o.customer_email)))
++      RETURNING id INTO v_contact;
++    END IF;
++    UPDATE public.orders SET contact_id = v_contact WHERE id = o.id AND contact_id IS NULL;
++  END IF;
++
++  IF v_contact IS NOT NULL THEN
++    v_case := public.cc_ensure_case_for_contact(v_contact);
++  END IF;
++
++  INSERT INTO public.control_center_tasks (case_id, contact_id, order_id, title, task_type, priority, status, due_at, auto_source, metadata)
++  VALUES (v_case, v_contact, o.id,
++          'Käynnistä tilaus: ' || COALESCE(o.product_type, 'muu'),
++          'start_order', 'high', 'open', now() + interval '24 hours', 'order_paid_trigger',
++          jsonb_build_object('order_id', o.id, 'product_type', o.product_type, 'total_cents', o.total_cents))
++  ON CONFLICT (order_id) WHERE order_id IS NOT NULL DO NOTHING
++  RETURNING id INTO v_task;
++
++  IF v_task IS NULL THEN
++    SELECT id INTO v_task FROM public.control_center_tasks WHERE order_id = o.id;
++  END IF;
++  RETURN v_task;
++END $$;
++REVOKE ALL ON FUNCTION public.cc_ensure_order_task(uuid) FROM PUBLIC, anon, authenticated;
++GRANT EXECUTE ON FUNCTION public.cc_ensure_order_task(uuid) TO service_role;
++
++-- Trigger runs in the same transaction as the order insert: order + task commit or roll back together.
++CREATE OR REPLACE FUNCTION public.cc_trigger_order_paid()
++RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $$
++BEGIN
++  IF NEW.status = 'paid' THEN
++    PERFORM public.cc_ensure_order_task(NEW.id);
++  END IF;
++  RETURN NEW;
++END $$;
++
++-- Atomic claim of side effects (emails, admin notify, CAPI). Returns true only to one caller.
++CREATE OR REPLACE FUNCTION public.claim_order_side_effects(p_order_id uuid, p_stale_seconds integer DEFAULT 300)
++RETURNS boolean LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $$
++DECLARE v_id uuid;
++BEGIN
++  UPDATE public.orders
++     SET side_effects_status = 'claimed', side_effects_claimed_at = now(), side_effects_attempts = side_effects_attempts + 1
++   WHERE id = p_order_id
++     AND (side_effects_status = 'pending'
++          OR (side_effects_status = 'claimed' AND side_effects_claimed_at < now() - make_interval(secs => p_stale_seconds)))
++  RETURNING id INTO v_id;
++  RETURN v_id IS NOT NULL;
++END $$;
++REVOKE ALL ON FUNCTION public.claim_order_side_effects(uuid, integer) FROM PUBLIC, anon, authenticated;
++GRANT EXECUTE ON FUNCTION public.claim_order_side_effects(uuid, integer) TO service_role;
++
++-- Admin-only dry-run/apply: paid orders lacking a fulfillment task.
++CREATE OR REPLACE FUNCTION public.cc_reconcile_order_tasks(p_apply boolean DEFAULT false)
++RETURNS TABLE(order_id uuid, created_at timestamptz, product_type text, task_id uuid, action text)
++LANGUAGE plpgsql SECURITY DEFINER SET search_path TO 'public' AS $$
++DECLARE r record;
++BEGIN
++  IF NOT public.has_role(auth.uid(), 'admin') THEN RAISE EXCEPTION 'forbidden' USING ERRCODE = '42501'; END IF;
++  FOR r IN SELECT o.id, o.created_at, o.product_type FROM public.orders o
++           WHERE o.status = 'paid' AND NOT EXISTS (SELECT 1 FROM public.control_center_tasks t WHERE t.order_id = o.id)
++           ORDER BY o.created_at LOOP
++    order_id := r.id; created_at := r.created_at; product_type := r.product_type;
++    IF p_apply THEN task_id := public.cc_ensure_order_task(r.id); action := 'created';
++    ELSE task_id := NULL; action := 'would_create'; END IF;
++    RETURN NEXT;
++  END LOOP;
++END $$;
++REVOKE ALL ON FUNCTION public.cc_reconcile_order_tasks(boolean) FROM PUBLIC, anon;
++GRANT EXECUTE ON FUNCTION public.cc_reconcile_order_tasks(boolean) TO authenticated, service_role;
+
+--- /dev/null
++++ b/drizzle/migrations/meta/0000_snapshot.json
+@@ -0,0 +1,18 @@
++{
++  "id": "853a3435-c872-4262-9212-cfdff589f10b",
++  "prevId": "00000000-0000-0000-0000-000000000000",
++  "version": "7",
++  "dialect": "postgresql",
++  "tables": {},
++  "enums": {},
++  "schemas": {},
++  "views": {},
++  "sequences": {},
++  "roles": {},
++  "policies": {},
++  "_meta": {
++    "columns": {},
++    "schemas": {},
++    "tables": {}
++  }
++}
+
+--- /dev/null
++++ b/drizzle/migrations/meta/_journal.json
+@@ -0,0 +1,13 @@
++{
++  "version": "7",
++  "dialect": "postgresql",
++  "entries": [
++    {
++      "idx": 0,
++      "version": "7",
++      "when": 1791063072277,
++      "tag": "0000_order_fulfillment_task_and_outbox",
++      "breakpoints": true
++    }
++  ]
++}
+
+--- /dev/null
++++ b/drizzle/schema.ts
+@@ -0,0 +1,1 @@
++// auto-generated and intentionally left blank, do not edit
+
+--- a/package.json
++++ b/package.json
+@@ -86,6 +86,8 @@
+     "@types/react-dom": "^18.3.7",
+     "@vitejs/plugin-react-swc": "^3.11.0",
+     "autoprefixer": "^10.4.21",
++    "drizzle-kit": "^0.31.11",
++    "drizzle-orm": "^0.45.3",
+     "eslint": "^9.32.0",
+     "eslint-plugin-react-hooks": "^5.2.0",
+     "eslint-plugin-react-refresh": "^0.4.20",
+@@ -93,6 +95,7 @@
+     "jsdom": "^20.0.3",
+     "lovable-tagger": "^1.1.13",
+     "postcss": "^8.5.6",
++    "postgres": "^3.4.9",
+     "tailwindcss": "^3.4.17",
+     "typescript": "^5.8.3",
+     "typescript-eslint": "^8.38.0",
+
+--- a/roadmap.md
++++ b/roadmap.md
+@@ -21,3 +21,13 @@
+ ## 2026-09-30 — Security fixes (selected findings)
+ - [ ] Add hard anti-abuse floors to claude-chat (per-IP burst + hard caps) — findings lov_finding_92719771319a6e38_1a0dfa74 / _ef1b2f34
+ - [ ] Resolve market-images public read policy finding (lov_db_storage_objects_owner_unbound_v1_f5ab0f7b102c37d7) — intentional public listing images; propose ignore
++
++## 2026-10-03 — Caars renewal
++- [x] P0 stripe-webhook retry/idempotency + per-order task (deployed, DB self-test passed)
++- [x] Stripe reconciliation (18/18 sessions ↔ orders)
++- [ ] Admin decision: create tasks for 18 old paid orders (cc_reconcile_order_tasks)
++- [ ] Homepage six service cards + session-local handoff
++- [ ] Light theme whole public site
++- [ ] Service-context chatbots (no financing → Perusselvitys hijack)
++- [ ] SEO/AEO for six routes + /rahoitus-ja-vaihtoauto
++- [ ] Germany 1 990 € pricing decision
+
+--- a/src/integrations/supabase/types.ts
++++ b/src/integrations/supabase/types.ts
+@@ -532,6 +532,7 @@
+           due_at: string | null
+           id: string
+           metadata: Json
++          order_id: string | null
+           priority: string
+           reminded_at: string | null
+           snoozed_until: string | null
+@@ -551,6 +552,7 @@
+           due_at?: string | null
+           id?: string
+           metadata?: Json
++          order_id?: string | null
+           priority?: string
+           reminded_at?: string | null
+           snoozed_until?: string | null
+@@ -570,6 +572,7 @@
+           due_at?: string | null
+           id?: string
+           metadata?: Json
++          order_id?: string | null
+           priority?: string
+           reminded_at?: string | null
+           snoozed_until?: string | null
+@@ -593,6 +596,20 @@
+             referencedRelation: "crm_contacts"
+             referencedColumns: ["id"]
+           },
++          {
++            foreignKeyName: "control_center_tasks_order_id_fkey"
++            columns: ["order_id"]
++            isOneToOne: false
++            referencedRelation: "orders"
++            referencedColumns: ["id"]
++          },
++          {
++            foreignKeyName: "control_center_tasks_order_id_fkey"
++            columns: ["order_id"]
++            isOneToOne: false
++            referencedRelation: "orders_paid_open_followup"
++            referencedColumns: ["id"]
++          },
+         ]
+       }
+       conversation_states: {
+@@ -1941,6 +1958,11 @@
+           id: string
+           items: Json
+           product_type: string | null
++          side_effects_attempts: number
++          side_effects_claimed_at: string | null
++          side_effects_done_at: string | null
++          side_effects_last_error: string | null
++          side_effects_status: string
+           status: string
+           stripe_payment_intent_id: string | null
+           stripe_session_id: string
+@@ -1961,6 +1983,11 @@
+           id?: string
+           items?: Json
+           product_type?: string | null
++          side_effects_attempts?: number
++          side_effects_claimed_at?: string | null
++          side_effects_done_at?: string | null
++          side_effects_last_error?: string | null
++          side_effects_status?: string
+           status?: string
+           stripe_payment_intent_id?: string | null
+           stripe_session_id: string
+@@ -1981,6 +2008,11 @@
+           id?: string
+           items?: Json
+           product_type?: string | null
++          side_effects_attempts?: number
++          side_effects_claimed_at?: string | null
++          side_effects_done_at?: string | null
++          side_effects_last_error?: string | null
++          side_effects_status?: string
+           status?: string
+           stripe_payment_intent_id?: string | null
+           stripe_session_id?: string
+@@ -3108,10 +3140,25 @@
+         Args: { p_contact_id: string }
+         Returns: string
+       }
++      cc_ensure_order_task: { Args: { p_order_id: string }; Returns: string }
++      cc_reconcile_order_tasks: {
++        Args: { p_apply?: boolean }
++        Returns: {
++          action: string
++          created_at: string
++          order_id: string
++          product_type: string
++          task_id: string
++        }[]
++      }
+       cc_set_gmail_handoff: {
+         Args: { p_activity_id: string; p_draft?: string; p_status?: string }
+         Returns: Json
+       }
++      claim_order_side_effects: {
++        Args: { p_order_id: string; p_stale_seconds?: number }
++        Returns: boolean
++      }
+       claim_slack_alert: {
+         Args: { p_key: string; p_summary?: string; p_window_seconds: number }
+         Returns: {
+@@ -3342,6 +3389,11 @@
+           id: string
+           items: Json
+           product_type: string | null
++          side_effects_attempts: number
++          side_effects_claimed_at: string | null
++          side_effects_done_at: string | null
++          side_effects_last_error: string | null
++          side_effects_status: string
+           status: string
+           stripe_payment_intent_id: string | null
+           stripe_session_id: string
+
+--- a/supabase/functions/stripe-webhook/index.ts
++++ b/supabase/functions/stripe-webhook/index.ts
+@@ -64,6 +64,11 @@
+   // raha vahvistuu myöhemmin async_payment_succeeded-tapahtumassa. Molemmat
+   // kirjaavat tilauksen vain kun payment_status="paid"; unique stripe_session_id
+   // tekee kirjauksesta idempotentin.
++  if (event.type === "checkout.session.async_payment_failed") {
++    const s = event.data.object as Stripe.Checkout.Session;
++    console.warn(`[stripe-webhook] async payment FAILED for session ${s.id} — no order, no task`);
++    return ok();
++  }
+   if (
+     event.type !== "checkout.session.completed" &&
+     event.type !== "checkout.session.async_payment_succeeded"
+@@ -71,9 +76,7 @@
+     return ok();
+   }
+ 
+-  // Kaikki käsittely allekirjoituksen jälkeen: sisäinen virhe logitetaan,
+-  // mutta Stripelle palautetaan aina 200 (ei uusintakierrettä / endpointin disablointia).
+-  let background: Promise<void> | null = null;
++  // Kriittinen tallennus (tilaus + tehtävä + sivuvaikutusten claim) → virheestä 5xx ja Stripe yrittää uudelleen.
+   const main = async () => {
+     const session = event.data.object as Stripe.Checkout.Session;
+ 
+@@ -187,7 +190,8 @@
+       else console.warn("[stripe-webhook] crm_contact_id metadata did not match a contact");
+     }
+ 
+-    // Save order to database
++    // Save order to database. AFTER INSERT -trigger luo samassa transaktiossa
++    // yhden tilauskohtaisen Control Center -tehtävän (control_center_tasks.order_id UNIQUE).
+     const { data: orderRow, error: dbError } = await supabaseAdmin.from("orders").insert({
+       contact_id: metaContactId,
+       stripe_session_id: session.id,
+@@ -205,25 +209,40 @@
+       status: "paid",
+     }).select("id").maybeSingle();
+ 
+-    // orders.stripe_session_id on UNIQUE → Stripen uusintayritys osuu 23505:een.
+-    // orderCreated === false tarkoittaa, että tämä sessio on jo käsitelty, jolloin
+-    // CRM-synkkaa ei ajeta uudelleen (ei duplikaattikontaktia eikä -aktiviteettia).
+-    const isDuplicateSession = dbError?.code === "23505";
+-    const orderCreated = !dbError && !!orderRow?.id;
+-
++    let orderId: string | null = orderRow?.id ?? null;
+     if (dbError) {
+-      if (isDuplicateSession) {
+-        console.log("Order already saved for this session — skipping CRM sync (webhook retry)");
+-      } else {
+-        console.error("Failed to save order:", dbError);
++      if (dbError.code !== "23505") {
++        throw new RetryableError(`order insert failed: ${dbError.code ?? ""} ${dbError.message}`);
++      }
++      const { data: existing, error: exErr } = await supabaseAdmin
++        .from("orders").select("id").eq("stripe_session_id", session.id).maybeSingle();
++      if (exErr || !existing?.id) throw new RetryableError("existing order lookup failed");
++      orderId = existing.id as string;
++      console.log("[stripe-webhook] order already exists for session (retry/duplicate event)");
++    }
++    if (!orderId) throw new RetryableError("order id missing after insert");
++
++    // Varmistetaan tehtävä myös vanhoille riveille (idempotentti).
++    const { error: taskErr } = await supabaseAdmin.rpc("cc_ensure_order_task", { p_order_id: orderId });
++    if (taskErr) throw new RetryableError(`ensure task failed: ${taskErr.message}`);
++
++    // Vain yksi käsittelijä saa ajaa sivuvaikutukset (sähköpostit, CRM, CAPI, admin-ilmoitus).
++    const { data: claimed, error: claimErr } = await supabaseAdmin.rpc("claim_order_side_effects", { p_order_id: orderId });
++    if (claimErr) throw new RetryableError(`claim failed: ${claimErr.message}`);
++    if (!claimed) {
++      const { data: st } = await supabaseAdmin.from("orders").select("side_effects_status").eq("id", orderId).maybeSingle();
++      if (st?.side_effects_status === "done") {
++        console.log("[stripe-webhook] side effects already done — skipping");
++        return;
+       }
+-    } else {
+-      console.log("Order saved successfully");
++      // Toinen ajo on kesken → pyydetään Stripeä yrittämään myöhemmin.
++      throw new RetryableError("side effects in progress by another delivery");
+     }
++    const orderCreated = true;
++    const idemKey = `caars-${session.id}`;
+ 
+     const orderEmail = session.customer_details?.email || session.customer_email;
+ 
+-    // Loput (CRM, case enrich, CAPI, admin notify, sähköpostit) taustalla.
+     const followUp = async () => {
+ 
+     // ---------------------------------------------------------------
+@@ -244,7 +263,7 @@
+           },
+           tags: ["asiakas", `ostettu:${productType}`],
+           metadata: {
+-            last_order_id: orderRow?.id ?? null,
++            last_order_id: orderId,
+             last_order_product_type: productType,
+             last_order_amount_cents: session.amount_total || 0,
+             last_order_currency: session.currency || "eur",
+@@ -257,7 +276,7 @@
+             summary: `Maksu: ${primaryItemName || productType} — ${amountEur} €`,
+             metadata: {
+               stripe_session_id: session.id,
+-              order_id: orderRow?.id ?? null,
++              order_id: orderId,
+               product_type: productType,
+               amount_cents: session.amount_total || 0,
+               currency: session.currency || "eur",
+@@ -267,11 +286,11 @@
+ 
+         // Jos checkout ei tuonut valmista contact_id:tä, kiinnitetään tilaus
+         // siihen kontaktiin, jonka CRM-upsert juuri vahvisti tälle maksulle.
+-        if (!metaContactId && crm.ok && crm.contact_id && orderRow?.id) {
++        if (!metaContactId && crm.ok && crm.contact_id && orderId) {
+           const { error: linkError } = await supabaseAdmin
+             .from("orders")
+             .update({ contact_id: crm.contact_id })
+-            .eq("id", orderRow.id)
++            .eq("id", orderId)
+             .is("contact_id", null);
+           if (linkError) {
+             console.warn("[stripe-webhook] order contact link failed:", linkError.message);
+@@ -436,6 +455,7 @@
+             headers: {
+               "Content-Type": "application/json",
+               Authorization: `Bearer ${resendApiKey}`,
++              "Idempotency-Key": `${idemKey}-customer`,
+             },
+             body: JSON.stringify({
+               from: "Caars.fi <noreply@caars.fi>",
+@@ -474,6 +494,7 @@
+           headers: {
+             "Content-Type": "application/json",
+             Authorization: `Bearer ${resendApiKey}`,
++            "Idempotency-Key": `${idemKey}-admin`,
+           },
+           body: JSON.stringify({
+             from: "Caars.fi Tilaukset <noreply@caars.fi>",
+@@ -506,36 +527,35 @@
+       console.log("Skipping email: RESEND_API_KEY missing");
+     }
+     };
+-    background = followUp().catch((e) =>
+-      console.error("[stripe-webhook] background processing failed:", (e as Error)?.message ?? e)
+-    );
+-  };
+ 
+-  const mainP = main();
++    // Sivuvaikutukset ajetaan synkronisesti ja merkitään tehdyiksi vasta onnistuneen ajon jälkeen.
+     try {
+-    // Tilausrivin tallennus odotetaan (max 8 s), jotta vastaus pysyy alle ~10 s.
+-    await Promise.race([
+-      mainP,
+-      new Promise<void>((resolve) =>
+-        setTimeout(() => {
+-          console.error("[stripe-webhook] order save exceeded 8s — responding 200, continuing in background");
+-          resolve();
+-        }, 8000)
+-      ),
+-    ]);
++      await followUp();
++      await supabaseAdmin.from("orders")
++        .update({ side_effects_status: "done", side_effects_done_at: new Date().toISOString(), side_effects_last_error: null })
++        .eq("id", orderId);
+     } catch (e) {
+-    console.error("[stripe-webhook] processing failed:", (e as Error)?.message ?? e, (e as Error)?.stack);
++      const msg = String((e as Error)?.message ?? e).slice(0, 500);
++      await supabaseAdmin.from("orders")
++        .update({ side_effects_status: "pending", side_effects_last_error: msg })
++        .eq("id", orderId);
++      throw new RetryableError(`side effects failed: ${msg}`);
+     }
++  };
+ 
+-  {
+-    const tail = mainP.catch(() => {}).then(() => background ?? undefined);
+   try {
+-      // deno-lint-ignore no-explicit-any
+-      (globalThis as any).EdgeRuntime?.waitUntil(tail);
++    await main();
+   } catch (e) {
+-      console.error("[stripe-webhook] waitUntil failed:", (e as Error)?.message);
+-    }
++    const retryable = e instanceof RetryableError;
++    console.error("[stripe-webhook] processing failed:", (e as Error)?.message ?? e);
++    // Kriittinen tallennus epäonnistui → 5xx, jotta Stripe yrittää uudelleen.
++    return new Response(JSON.stringify({ received: false, retry: true }), {
++      headers: { ...corsHeaders, "Content-Type": "application/json" },
++      status: retryable ? 503 : 500,
++    });
+   }
+ 
+   return ok();
+ });
++
++class RetryableError extends Error {}

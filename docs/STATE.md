@@ -18,6 +18,12 @@ Updated 2026-10-04. Start with ARCHITECTURE.md to distinguish this assistant bac
 - Identify actual Caars live Stripe account and endpoint, investigate 17 failures, reconcile paginated paid sessions/orders/tasks.
 - Verify website commit synchronization to `venturecore/caars-bright-spark` main through Lovable; local BraiGAIP account cannot access that private repository.
 
+### First implementation phase — website SHA 0b134658
+
+Website source commit `0b134658a13a11e9ee40603eebc35ff02f31f7a7` now contains the first payment patch; its diff is preserved in `docs/handoff/2026-10-04-p0-website.diff`. Project-agent trace records live webhook deployment, rolled-back DB checks (new buyer/two orders/repeat/unique session), invalid-signature checks, and 18 paid Caars Checkout Sessions matching 18 stored orders with pagination exhausted. The previous connector-account limitation was resolved through Lovable's project-connected Caars account. Historical 17 delivery failures remain unexplained because old logs are unavailable.
+
+Independent review confirms atomic order/task insertion and restricted RPC grants. Remaining required fixes were dispatched: swallowed Resend errors, unchecked finalization updates, missing claim owner token, concurrent new-contact resolution, deposit handling and neutral pending UI. Do not mark P0 fully complete yet. Historic notification delivery remains UNKNOWN; marking old rows done is a no-resend precaution, not proof of delivery. Historic task dry-run requested; no blanket historical backfill authorized without status evidence.
+
 ## P1 — requested implementation running, not yet validated
 
 - Six service cards: Perusselvitys 79 EUR, Etsintä 79 EUR, TuontiApu 250 EUR, Tuontipalvelu SE from1290/DE from1990, contact, financing/trade-in.

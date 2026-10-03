@@ -52,3 +52,12 @@ Status at creation: implementation running; no completed fixes, tests, deploymen
 - User supplied `BraiGAIP/caars-backend`; inspected source confirms it is the assistant backend. Companion architecture/state/handoff committed and pushed there at `1a105819691b7c663b2f6b20ce08ba2967f44d56`; GitHub remote main SHA verified equal.
 - Lovable Settings → Git → GitHub identifies actual website repo `venturecore/caars-bright-spark`, branch main, Connected / In sync. Local BraiGAIP CLI access fails repository-not-found; do not replace its remote or overwrite assistant backend with website source.
 - Lovable UI showed 602 credits remaining. No new credits needed/purchased.
+
+## First implementation phase
+
+- Website source SHA `0b134658a13a11e9ee40603eebc35ff02f31f7a7`, patch archived as `2026-10-04-p0-website.diff`.
+- Project-agent trace: webhook deployed, missing/invalid signature rejected, rolled-back database checks passed; 18 paid sessions in actual Caars account matched 18 stored orders and Stripe pagination exhausted. Historical failure cause not verifiable.
+- Independent reviewer confirms unique order_id task + AFTER INSERT trigger atomicity and service-role-only grants. Found swallowed Resend errors, unchecked done/reset writes, stale claim lacking owner fencing and contact creation race. Follow-up dispatched to repair before claiming completion.
+- Deposit metadata/confirmation and pending success-page fixes also dispatched with UI/chat/SEO phase.
+- Historical notifications unknown; avoid automatic resend. Historical order task dry-run requested with follow-up status classification.
+- Source ZIP downloaded through Lovable UI to local inspection workspace `/Users/he68/Development/caars-bright-spark`; it is a source snapshot, not a Git checkout. `npm ci --ignore-scripts` failed due to existing stale package-lock; local dependency installation/verification underway. No CI pass claimed.
