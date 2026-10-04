@@ -70,3 +70,10 @@ Status at creation: implementation running; no completed fixes, tests, deploymen
 - Source re-review identified remaining deposit recovery/fencing defects and service bot wiring/prompt/session gaps; exact corrections sent to Lovable. No final reliability claim yet.
 - User explicitly rejected the flattened near-white design. Brand/color/photo/hierarchy correction started; keep light accessibility without stripping Caars identity. Frontend remains unpublished.
 - Historic order classification: 4 handled, 14 open (12 no product classification, 1 Perusselvitys, 1 Tuonti). No blind backfill/resend performed; original 17 failed-delivery logs unavailable.
+
+## First visual correction — website SHA 9b3cbb81
+
+- Restored existing car image, turquoise/orange service accents and stronger section boundaries; six card behavior preserved. Patch archived as `2026-10-04-visual-correction.diff` against 6411c5f. User's correction takes precedence over the earlier flattened light style.
+- Browser: all six card forms independently carried synthetic text/link/topic to the correct clean service URL. Perusselvitys draft also survived reload. Actual card CTA colors were sampled: white on teal 5.42:1, orange 4.50:1, green 6.04:1.
+- The static preview was displaying an old edit; Lovable's Back to latest restored the newest preview. Check this before diagnosing stale screenshots. A further queued refinement requests an unobscured split photo and narrower legacy CSS overrides.
+- Frontend remains unpublished. Payment/chat correctness follow-up and final design verification are still running.
