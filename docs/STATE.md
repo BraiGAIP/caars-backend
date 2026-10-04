@@ -41,6 +41,10 @@ Independent review confirms atomic order/task insertion and restricted RPC grant
 
 ## Current handoff
 
+### Latest user steering — premium UI/UX
+
+New premium homepage work is authorized and running: one orange purchase theme, secondary search/contact, distinct Autohalli partner card, refined six-card bento layout/inputs, trust badges, restrained motion and semantic calculator/Tesla table. Read `docs/handoff/2026-10-04-ui-ux-update.md` for actual Agency roles, design decisions and pending verification. Preserve the independently reviewed P0 fixes at website SHA 2589a0af.
+
 ### Website review checkpoint: SHA 6411c5f, 2026-10-04
 
 - Six cards, service-local session handoff, summaries/FAQ/SEO and new financing route implemented in unpublished preview. Independent local build passed (134 prerender routes, 96 sitemap URLs); 140/140 tests passed across 16 files. Optional audit-PDF regeneration failed because xhtml2pdf is absent; the build continued successfully.
