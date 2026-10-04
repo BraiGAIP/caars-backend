@@ -1,0 +1,1558 @@
+--- /dev/null
++++ b/.lovable/plan.md
+@@ -0,0 +1,12 @@
++# Final premium review fixes
++
++## Changes
++- Reduce desktop service-card reserved bands to 64 px heading, 48 px price, 72 px description, and 120 px field while preserving aligned controls and actions.
++- Add explicit accessibility roles to the existing native cost table, row groups, rows, row headers, and cells for the narrow stacked presentation.
++- Extend DOM tests to verify the explicit semantic hierarchy.
++- Correct the handoff provenance and test evidence, including the Node 26 web-storage condition and the distinction between reflow testing and true 200% zoom.
++
++## Verification
++- Run all tests with native Node web storage disabled, TypeScript validation, and the production build.
++- Check the current preview build result and record only verified source/sync facts.
++- Do not publish, purchase credits, use Max mode, or alter payments, private handoff, pricing, routes, or chat safeguards.
+
+--- /dev/null
++++ b/.lovable/plan/premium-etusivun-viimeistely-2026-10-04.md
+@@ -0,0 +1,23 @@
++# Premium-etusivun viimeistely
++
++## Toteutus
++- Päivitä etusivun kuusi palvelukorttia yhtenäiseen bento-rakenteeseen säilyttäen nykyinen 1/2/3-palstainen järjestys, reitit, hinnat, lomakkeet ja yksityinen tiedonsiirto.
++- Yhtenäistä toimintoroolit: Caarsin ostettavat palvelut oranssiksi, etsintä ja yhteydenotto petroolireunaisiksi sekä Autohalli-kumppanipalvelu omaksi neutraaliksi kortikseen.
++- Säilytä nykyinen erillinen teksti–BMW-kuva-masthead ja tee luottamusluvuista kolme selkeää kuvakemerkkiä ilman uusia väitteitä.
++- Muuta kustannusesimerkki semanttiseksi, responsiiviseksi taulukoksi. Säilytä kaikki nykyiset summat, lähdetekstit ja vastuuvapautukset muuttamatta laskentalogiikkaa.
++- Rajaa uudet väri-, liike- ja fokusratkaisut vain etusivun palvelu- ja kustannusosioihin, jotta hallinta- ja maksunäkymät eivät muutu.
++
++## Tekninen toteutus
++- Lisää semanttiset etusivutunnisteet nykyiseen vaaleaan teemaan ja tyylikartta palvelukorteille.
++- Käytä 48 px kosketuskohteita, vähintään 16 px lomaketekstiä mobiilissa, näkyviä fokusrenkaita ja `prefers-reduced-motion`-poikkeusta.
++- Lisää käyttäytymiseen perustuva DOM-testi kustannustaulukon caption-, row header-, total/footer- ja linkkihierarkialle; nykyiset 15 kortti- ja handoff-testiä säilyvät.
++
++## Varmennus ja dokumentointi
++- Aja puhdas `npm ci`, kaikki testit, TypeScript-tarkistus ja tuotantokäännös.
++- Tarkista selaimella 320, 390, 768 ja 1440 px sekä 200 % zoom: kuusi korttia, puhtaat URLit, handoff, refresh/back, ei automaattista lähetystä, fokus, kontrasti, lomakefontit ja vähennetty liike.
++- Ota ja tarkista lopulliset kuvat mastheadista, korteista ja kustannustaulukosta.
++- Lisää `docs/handoff/2026-10-04-ui-ux-update.md` ja päivitä nykytila, arkkitehtuurin design-osio sekä roadmap todellisilla tuloksilla ja rajoitteilla.
++- Frontendia ei julkaista. Maksuja, Max-tilaa tai uusia kuvia ei käytetä.
++
++## Oletus
++- Pyydettyjen ulkoisten agenttiroolien tiedostot eivät ole tämän työtilan aktiivisissa taidoissa. Toteutus noudattaa käyttäjän koottua spesifikaatiota; lähteenä ei väitetä lukemattomia roolitiedostoja.
+
+--- a/AGENTS.md
++++ b/AGENTS.md
+@@ -1,2 +1,5 @@
+ - Paid-order fulfillment uses one unique order task, owner-token-fenced effect leases, and database-idempotent CRM payment activities; provider idempotency reduces duplicate external sends but does not prove exactly-once delivery.
+ - Deposit confirmation uses a separate owner-token-fenced lease shared by webhook and browser verification; a busy or missing expected deposit is retryable and only the token owner may finalize or reset it.
++- Web-chat conversation IDs are scoped by validated service while the anonymous visitor ID remains shared for analytics, preventing cross-service thread and contact-suppression leakage.
++- Mandatory service safety boundaries are appended after any admin-replaceable AI prompt in both chat endpoints, so custom wording cannot remove product and safety limits.
++- Homepage service styling is role-based (`purchase`, `secondary`, `partner`) and scoped under homepage classes, so visual changes cannot restyle admin or payment flows.
+
+--- a/docs/ARCHITECTURE.md
++++ b/docs/ARCHITECTURE.md
+@@ -1,37 +1,50 @@
+-# Caars.fi — Architecture (verified 2026-10-03)
+-
+-## Stack
+-- Frontend: React 18 + Vite SPA (`src/`), prerender for SEO (`scripts/prerender.mjs`), Cloudflare Worker in front of caars.fi (`cloudflare-worker/`).
+-- Backend: Lovable Cloud (one instance serves preview and production). Edge functions in `supabase/functions/`.
+-- Git: Hans verified in Lovable Settings → Git that the project is connected to `venturecore/caars-bright-spark`, branch `main`, and shown as “In sync with GitHub”. The sandbox does not expose that platform remote, so it cannot independently prove a push or SHA.
+-
+-## Payment routing (VERIFIED)
+-- Stripe account: "Caars Autotuontiliike" (connected to this project). This is NOT the BRAI account seen in Codex.
+-- Live webhook endpoint → `functions/v1/stripe-webhook`, status enabled, events: `checkout.session.completed`, `async_payment_succeeded`, `async_payment_failed`, `expired`.
+-- `create-checkout`: server-side `PRICE_CATALOG` (client prices ignored). 79 € Perusselvitys / Etsintäpalvelu, 99 € Etsintäpalvelu +, 250 € TuontiApu, 1 290 € Avaimet käteen.
+-- `verify-checkout-session`: success page only trusts a server-verified paid session; delayed methods → pending.
+-
+-## stripe-webhook flow (2026-10-03)
+-1. Raw body + `stripe-signature` verified (`constructEventAsync`); missing/invalid → 400.
+-2. `async_payment_failed` → logged, 200, no order/task. Other non-checkout events → 200.
+-3. Unpaid `completed` → no order. Paid `completed` or `async_payment_succeeded` →
+-4. Insert `orders` (unique `stripe_session_id`). AFTER INSERT trigger `cc_trigger_order_paid` → `cc_ensure_order_task` creates contact (if missing), case and exactly one task per order (`control_center_tasks.order_id` unique) in the same transaction.
+-5. Duplicate delivery (23505) → load existing order, re-ensure task.
+-6. `claim_order_side_effects_v2` returns an owner token. Every effect mark and finalization requires that token. Done → `side_effects_status='done'`; required failure → token-checked reset to `pending` and HTTP 503. Resend calls use a stable provider idempotency key per session.
+-7. Any critical persistence error → 5xx (retryable). No detached background work, no timeout-based 200.
+-
+-## Key tables
+-- `orders`: payment state (`status`), internal follow-up (`followup_status`), side-effect outbox (`side_effects_*`).
+-- `control_center_tasks.order_id`: one fulfillment task per paid order.
+-- Admin RPC `cc_reconcile_order_tasks(p_apply)`: dry-run/apply tasks for paid orders without one.
+-
+-
+-## Update 2026-10-03 — owner-token lease and required confirmations
+-Migration `0002_order_side_effect_owner_token` (additive): `orders.side_effects_claim_token`, `orders.side_effects_completed`, RPCs `claim_order_side_effects_v2`, `mark_order_side_effect`, `finish_order_side_effects` (service_role only), advisory lock in `cc_ensure_order_task`. stripe-webhook redeployed. Historical email delivery for the 18 pre-existing orders: UNKNOWN (bulk-marked done to avoid re-sending). Evidence: see docs/STATE.md.
+-
+-## Update 2026-10-04 — deposit fence and CRM transaction
+-- `commitment_deposits` now has `confirmation_claim_token` and `confirmation_last_error`. `claim_deposit_confirmation_v2` grants a reclaimable owner-token lease; `finish_deposit_confirmation` permits only that owner to finalize or reset it.
+-- The browser verifier and signed webhook share the same deposit helper. Already sent, busy-unsent and newly sent are distinct states. Busy-unsent and a missing expected deposit are retryable; the webhook does not mark its `deposit` effect complete in either case.
+-- Resend is bounded to 8 seconds and uses a stable idempotency key. This protects retries, but provider delivery is not mathematically exactly once: a provider may accept a request before a network failure hides its response.
+-- `cc_record_order_payment_crm(order_id)` atomically resolves/links the contact, sets `lead_stage='won'`, and inserts one payment activity using unique `external_id='stripe-payment:<session>'`. The webhook marks `crm` complete only after this function succeeds.
+-- Required effects are CRM persistence and customer/admin confirmation email. CAPI and push are awaited but best-effort. Database operations still rely on the platform request timeout; external HTTP calls in the affected confirmation paths have explicit 8-second bounds.
++# Caars.fi — Architecture (current 2026-10-04)
++
++## Runtime and source
++- React 18 + Vite SPA in `src/`; SEO prerendering in `scripts/prerender.mjs`; Cloudflare Worker in `cloudflare-worker/`.
++- Lovable Cloud provides the database, authentication and functions in `supabase/functions/`.
++- Website source is platform-connected to `venturecore/caars-bright-spark`, `main` (verified by Hans in Lovable UI). The sandbox does not expose the platform Git remote or independently prove push SHAs.
++
++## Public service routing and private handoff
++- Canonical service routes: `/perusselvitys`, `/auton-etsinta`, `/tuontiapu`, `/tuontipalvelu`, `/yhteystiedot`, `/rahoitus-ja-vaihtoauto`.
++- Homepage card data is sanitized and passed first in React Router state, with service-specific `sessionStorage` recovery for 30 minutes. Storage access is obtained inside guarded code, so a denied storage getter cannot prevent router-state navigation.
++- User messages, topics and car links are never put in query strings/fragments or analytics. Each service key is isolated; headings navigate without input and no draft is auto-sent.
++
++## Public homepage design architecture
++- The six-card DOM order follows the shared `SERVICES` configuration and the existing 1/2/3-column breakpoints. Cards are forms only for their own optional draft field; the card itself is not a click target.
++- `CARD_STYLES` assigns one semantic visual role per service: `purchase`, `secondary` or `partner`. Styling is scoped under `.home-premium` and `.home-cost-module`, preventing homepage color/motion rules from changing admin or payment views.
++- Purchase services share one accessible orange CTA. Etsintä/contact use a petrol outline. Finance is a non-SKU partner card with an Autohalli text badge and an internal route CTA; no unverified partner logo or external glyph is used.
++- The masthead keeps text and the existing BMW photo in separate 55/45 desktop columns and stacks the photo after text on mobile. Trust statements use existing verified claims only.
++- The cost example is an HTML table with a caption, `th scope="row"`, tabular right-aligned values and a `tfoot` total. At narrow reflow widths each row stacks without changing source order or amounts.
++- Inputs and actions have 48 px minimum targets, 16 px service-field text, persistent labels and visible focus rings. Hover motion is pointer-gated; `prefers-reduced-motion` removes scoped transitions/transforms.
++
++## Chat architecture
++- `claude-chat` is the primary endpoint and `chat` is the fallback. Both validate the same six service IDs and append the shared mandatory safety context after any admin-replaceable prompt.
++- Limits cover exact service scope/prices, one Swedish-car remote Perusselvitys based on seller information/photos, no physical inspection or condition guarantee, separate payments, no euro car-tax estimate and restricted financing/trade-in claims.
++- Browser chat `session_id` is service-scoped for conversation state, admin threads and contact-request suppression. A separate anonymous `visitor_id` remains shared for attribution/aggregate analytics.
++
++## Checkout and payment verification
++- Stripe API version: `2025-08-27.basil`.
++- `create-checkout` owns the price catalogue; client amounts are not trusted. Products: 79 € Perusselvitys, 79 € Etsintäpalvelu, 99 € Etsintäpalvelu +, 250 € TuontiApu and Sweden full import from 1 290 €. Germany from 1 990 € is quote-only.
++- Maksupalvelu is a separate 149 € service and is not included in Tuontipalvelu. Public pricing, the knowledge base and both chats preserve this boundary; the Tesla example excludes it from its displayed total.
++- `verify-checkout-session` lets the success page trust only a server-verified paid session. A valid delayed payment can be pending; cancelled/expired/failed/unknown sessions do not receive paid success content or Purchase events.
++
++## Paid-order webhook and schema
++1. `stripe-webhook` verifies the raw body and `stripe-signature`; missing/invalid signatures return 400.
++2. Non-relevant events return 200. Unpaid completed and async failure create no paid fulfillment. Paid completed or `checkout.session.async_payment_succeeded` proceed idempotently.
++3. `orders.stripe_session_id` is unique. The paid-order transaction creates/resolves the CRM contact, case and one `control_center_tasks` row protected by unique `order_id`; normalized-email resolution is serialized.
++4. `claim_order_side_effects_v2(order_id, stale_seconds)` returns a unique owner token. `mark_order_side_effect` renews/records one effect and `finish_order_side_effects` finalizes/resets only for that token. The old unfenced claim is deprecated.
++5. `cc_record_order_payment_crm(order_id)` atomically links the contact, sets the won stage and inserts one payment activity keyed by Stripe session.
++6. Required CRM/customer/admin confirmation failures release the lease and return retryable 5xx. Resend uses stable provider idempotency keys and eight-second bounds. CAPI/admin push are awaited, bounded and best-effort.
++
++Relevant fields: `orders.status` remains payment state; `followup_status` is `open|handled`; `side_effects_status`, `side_effects_claim_token` and `side_effects_completed` track processing. `cc_reconcile_order_tasks(false)` is read-only; apply mode must follow case-by-case evidence.
++
++## Deposit confirmation
++- `commitment_deposits` stores `confirmation_claim_token` and `confirmation_last_error`.
++- `claim_deposit_confirmation_v2` grants a stale-reclaimable owner-token lease; `finish_deposit_confirmation` permits only the current owner to mark sent or reset.
++- Signed webhook and browser verification share the same helper. Already-sent, busy-unsent and newly-sent are distinct; busy or missing expected deposit returns retryable failure. Checkout session attachment errors are checked.
++
++## Delivery guarantees and historical data
++- Database uniqueness, fenced leases and provider idempotency make retries safe but do not mathematically guarantee exactly-once external delivery.
++- The 18 historical orders were marked `done` only to block automatic resends. Their notification delivery remains UNKNOWN.
++- Current aggregate classification is 4 handled and 14 open; review the 14 individually before any apply-mode reconciliation.
+
+--- a/docs/STATE.md
++++ b/docs/STATE.md
+@@ -1,64 +1,41 @@
+-# Caars.fi — State (2026-10-04, end of session)
+-
+-## Done (VERIFIED)
+-- P0 stripe-webhook (see follow-up section below): retryable 5xx on persistence errors, exclusive side-effect claim, Resend idempotency keys, `async_payment_failed` handled, unpaid completed sessions create no paid fulfillment. Deployed; unsigned/forged requests → 400 (curl, re-checked end of session).
+-- P0 per-order fulfillment task (unique `order_id`, first-time buyer gets contact + task in the order transaction). Rolled-back DB self-test: 2 orders same new buyer → 2 tasks; retry no duplicate; duplicate session rejected; side-effect claim exclusive.
+-- P0 299 € deposit (`commitment_deposit_299`): signed webhook marks deposit paid durably; confirmation now uses an owner-token-fenced, stale-reclaimable lease shared with browser verification. Busy-unsent and missing expected rows are retryable; only the current owner may finalize/reset. Resend has an 8-second timeout and stable idempotency key. Deployed.
+-- P0 PaymentSuccess pending: neutral clock icon, "Maksu käsittelyssä", no product name, no paid promise, Purchase events only for server-verified paid sessions.
+-- Stripe reconciliation: 18 paid live Checkout Sessions in the Caars account = 18 rows in `orders`.
+-- Homepage: six light service cards; heading links work without input; "Jatka" passes message/topic/car link via router state + sessionStorage (30 min TTL, per service). Browser smoke test: all 6 cards transfer content, survive reload and back/forward, URL has no query string, user text not seen in any request URL.
+-- Light public theme: the seven previously faint homepage labels were strengthened. The service cards retain orange/turquoise/green hierarchy and normal text is checked against 4.5:1; see final validation below.
+-- Chatbot: local vehicle-link reply removed (no Perusselvitys hijack); service context sent and allowlisted in backend; conversation cleared on service change; no auto-send. `?auto=` replaced with session handoff (legacy links migrated and stripped).
+-- Content: removed "2–3 cars per order" Perusselvitys promises (one Swedish car only) and a fake "Tänään tarkistettu 3 autoa" counter; "todellinen kunto" → visible condition from photos.
+-- Typecheck: `tsgo` exit 0. Build log: build OK.
+-- Tests: 37/37 tests in 5 runnable files pass (incl. 7 new handoff tests). 11 files cannot load in this sandbox (jsdom → incomplete native `canvas` build) — environment issue, not verified as passing.
+-
+-## P0 follow-up after independent review (2026-10-03)
+-- Webhook confirmations are now REQUIRED effects: missing RESEND_API_KEY or Resend non-2xx/network/timeout (8 s) → throw → lease released → HTTP 503 → Stripe retries. CRM upsert errors throw too.
+-- Per-effect completion (`orders.side_effects_completed`: deposit, crm, capi, admin_push, customer_email, admin_email). Retries skip effects already recorded; Resend idempotency keys cover the window between send and record.
+-- CAPI (Meta/TikTok) and admin push are awaited, best-effort, time-bounded; their failure does not block confirmations and is logged.
+-- Lease owner token: `claim_order_side_effects_v2` returns a token; `mark_order_side_effect` (also renews lease) and `finish_order_side_effects` require it. Finalize/release errors or a lost lease → 503. Old `claim_order_side_effects` marked DEPRECATED.
+-- `cc_ensure_order_task` serializes first-time-buyer contact creation with a per-normalized-email advisory lock.
+-- Rolled-back DB self-test PASSED: two orders, same new buyer (case/space-different email) → 1 contact, 2 tasks; double claim refused; stale owner A cannot mark, finalize or reset after B reclaims; B failure (simulated Resend 500) → pending; retry C marks effect and finalizes; double finalize refused. Cleanup verified (0 test rows).
+-- NOT tested live: actual Resend 500/network failure through the deployed function; true concurrent sessions (advisory lock verified by design, not by parallel load). Known residual: `crm_upsert_contact` (used by other forms) does not take the same lock.
+-- Historical: the 18 pre-existing orders were bulk-marked `done` to prevent re-sending; this does NOT prove their emails were delivered. Historical notification status: UNKNOWN. The 18/18 Stripe reconciliation proves persisted orders only, not delivery.
+-
+-## Historic orders (dry-run, aggregate only)
+-18 paid orders lack a per-order task; none has a contact-level order task.
+-- handled: 4 (3 Perusselvitys, 1 unknown) → do NOT backfill.
+-- open: 14 (12 unknown product, 1 Perusselvitys, 1 Tuonti) → admin review, then `cc_reconcile_order_tasks(true)` only if still pending.
+-
+-## Open
+-- P1: Cause of the 17 failed deliveries unverifiable (logs from that window unavailable). Endpoint enabled.
+-- P1: Real Klarna/delayed payment end-to-end not tested.
+-- P1: Frontend not published by agent (preview only). Edge functions are deployed (live).
+-- P2: Germany import = agreed quote from 1 990 € (DECISION, no instant checkout SKU).
+-- Git: sandbox does not expose the platform remote; Hans verified in Lovable Settings → Git that the project is connected to `venturecore/caars-bright-spark` main, "In sync with GitHub". Commit SHAs not verifiable from this sandbox.
+-
+-
+-## Final validation (2026-10-03 21:55–22:10 UTC)
+-Changed files this round: `src/components/__tests__/ServiceCardsHero.test.tsx` (new, 15 behaviour tests), `src/components/__tests__/Hero.visual.test.tsx` (deleted: obsolete 3-CTA className snapshots; `Hero` is no longer rendered on the homepage), `package.json` (+ devDependency `@testing-library/dom` ^10.4.0, required peer of @testing-library/react 16), `package-lock.json` (regenerated from package.json), `src/components/WhyCheckSection.tsx` (CTA button wraps on narrow screens).
+-- Clean copy: `npm ci` exit 0 → `npm run build` exit 0 (prerender 134 routes) → `vitest run` 16/16 files, 140/140 tests. Project tree: tsgo exit 0, vitest 140/140.
+-- Sandbox note: the optional native `canvas` package (via pdfjs-dist) fails to build here and breaks jsdom; it was removed from the sandbox node_modules only. Not a repo change.
+-- Browser (Playwright, localhost preview): at 320 px, no horizontal overflow on all 7 routes (homepage overflow 350 px found and fixed). Keyboard: Tab reaches all six cards in order, 18 focus stops, all with a visible focus indicator; Enter in the Perusselvitys field submits to /perusselvitys. Rendered contrast inside cards: lowest 4.5:1 (CTA buttons).
+-- Open: homepage mobile shows three floating bottom buttons (Analysoi / Perusselvitys / WhatsApp) — conflicts with the "max 1 floating button" rule; not changed in this round. Frontend NOT published. Commit SHA not verifiable from sandbox.
+-- Notifications: historical (pre-2026-10-03) order emails = UNKNOWN delivery. Their `side_effects_status='done'` is only a no-resend guard, not proof of delivery. New orders record each effect in `side_effects_completed`.
+-
+-## Brand-depth correction (2026-10-04)
+-- Homepage no longer presents a flat white service grid: the existing automotive photograph is restored as the first-viewport visual, while the content side remains light and readable without a heavy dark overlay.
+-- The six functional service cards retain their existing routes, inputs and session-local handoff. They now have service-specific icons, orange/teal/green accents, stronger borders and shadows, and distinct CTA treatments.
+-- The opening sequence now alternates a photographed light hero, turquoise-tinted service surface, stronger turquoise calculator surface, white benefit section and turquoise process section.
+-- Browser evidence (Playwright, localhost preview): 320 px, 768 px and 1280 px viewports all had `scrollWidth === clientWidth`; the hero image and exactly six service cards rendered. Six card-button contrast ratios were 5.42, 4.50, 6.04, 5.42, 6.04 and 4.66:1. Card controls remained keyboard reachable.
+-- Focused tests: `ServiceCardsHero.test.tsx` 15/15 passed. Typecheck: `tsgo -p tsconfig.app.json` exit 0. Preview build log: `build OK` at 2026-10-04 06:06:24 UTC.
+-- Frontend remains unpublished. Existing unrelated React ref warnings were observed in the preview console; no page error or horizontal overflow was found.
+-
+-## P0 correctness follow-up (2026-10-04 06:07–06:18 UTC)
+-- Additive migration `0003_fence_deposit_confirmation_and_order_crm.sql` applied. It changes no historical fulfillment rows and sends no old email.
+-- Deposit lease DB rollback test passed: one active owner, busy second claim rejected, stale lease reclaimed with a new token, stale owner unable to finalize/reset, current owner reset accepted, retry claim accepted. Live aggregate after test: 0 active claims and 0 paid-unsent deposits.
+-- Main-order CRM is database-idempotent per Stripe session. Link, won-stage and payment activity now succeed or fail together before the webhook records the `crm` effect.
+-- Both `claude-chat` and fallback `chat` validate the six allowed service values and append shared financing/trade-in, physical-inspection and tax/VAT constraints.
+-- `/rahoitus-ja-vaihtoauto` and `/yhteystiedot` mount service-aware chat. Browser evidence: the transferred draft appeared exactly in the composer and was not sent; URLs stayed clean.
+-- Mobile now has one bottom action, “Kysy Caars-avustajalta”; WhatsApp remains in page content. Browser 320 px: one bottom action, chat opened, empty draft stayed unsent, horizontal overflow 0, no page errors.
+-- Automated checks: `npm ci` succeeded; Vitest 17/17 files and 144/144 tests passed after removing only the broken optional sandbox `node_modules/canvas`; `tsgo -p tsconfig.app.json` exit 0; preview build log `build OK` at 06:13 UTC. Full lint remains failing on pre-existing `no-explicit-any` and hook warnings across unrelated files; changed-file lint also sees pre-existing violations inside the two legacy chat functions.
+-- Provider limitation: stable Resend idempotency keys and fenced database state make retries safe, but no claim of exactly-once external delivery is made. Historical pre-2026-10-03 notification delivery remains UNKNOWN; `done` is only the no-resend guard.
+-- Exact HTTP busy/missing deposit paths were source-covered and their database lease behavior was exercised; no real paid Stripe test session was available to safely force those two live HTTP states. No customer payment/refund or historical resend was initiated.
++# Caars.fi — CURRENT (verified 2026-10-04)
++
++## Verified done
++- Public homepage has a premium cool-neutral light Caars design, a separate 55/45 text-and-BMW-photo masthead on desktop, a stacked masthead on mobile, three icon-based trust statements, six role-based service cards, branded section surfaces and one mobile floating chat action. The heading never overlays the photograph.
++- Desktop service cards use compact aligned content bands (64 px heading, 48 px price, 72 px description and 120 px field) rather than reserving excessive blank description space; inputs and CTAs remain aligned.
++- Homepage CTA roles are explicit: Perusselvitys/TuontiApu/Tuontipalvelu use the same accessible orange purchase CTA; Etsintä/contact use petrol outlines; finance uses a muted `Kumppanipalvelu · Autohalli` surface and neutral internal CTA. Green remains for trust/WhatsApp, not purchase.
++- The Tesla cost example is a semantic responsive table with the existing vehicle/import/tax/registration values and approximate total, row headers and a distinct total footer. Native table elements retain explicit table/rowgroup/row/rowheader/cell roles when the narrow layout changes their CSS display. It explicitly excludes the separate optional 149 € Maksupalvelu from that total.
++- The six cards link to `/perusselvitys`, `/auton-etsinta`, `/tuontiapu`, `/tuontipalvelu`, `/yhteystiedot` and `/rahoitus-ja-vaihtoauto`. Optional message/link/topic data moves through router state plus service-isolated 30-minute session storage, never through URL parameters, fragments or analytics. Router-state transfer still works when browser storage access itself is denied.
++- Public service pages have visible summaries, matching FAQ/JSON-LD, unique metadata, canonical URLs, sitemap/prerender coverage and service-specific chat. Draft text is shown but never sent automatically.
++- Both AI endpoints validate the same six service contexts and append mandatory service/safety limits after any admin-editable prompt. Conversation IDs are service-scoped; the anonymous analytics identity remains shared.
++- Checkout prices are server-authoritative: Perusselvitys 79 €, Etsintäpalvelu 79 €, Etsintäpalvelu + 99 €, TuontiApu 250 € and Sweden full import from 1 290 €. Germany is an agreed quote from 1 990 €; there is no instant Germany checkout SKU.
++- DECISION: Maksupalvelu is a separate 149 € service, not part of Tuontipalvelu. Public descriptions, the knowledge base and both mandatory chat boundaries state this consistently; checkout amounts, routes and historical paid orders are unchanged.
++- Paid-order processing uses raw-body Stripe signature verification, durable order persistence, one unique fulfillment task per order, owner-token-fenced per-effect processing and database-idempotent CRM payment activity. Required persistence/email failures return retryable 5xx; optional CAPI/push is bounded and best-effort.
++- Delayed payments are supported: unpaid completed Checkout creates no paid fulfillment; `checkout.session.async_payment_succeeded` can fulfill idempotently; failure creates no paid task. PaymentSuccess shows a neutral pending state and emits Purchase only after server verification.
++- The 299 € deposit uses a separate owner-token-fenced lease shared by signed webhook and browser verification. Busy/missing expected deposits are retryable, only the current owner can finalize/reset, and email calls have an eight-second bound.
++- Cookie choices use accessible semantic brand surfaces; “Vain välttämättömät” remains visible above the single chat action.
++
++## Historical order classification
++- VERIFIED: 18 paid live Checkout sessions correspond to 18 persisted order rows.
++- VERIFIED read-only dry-run: 4 handled and 14 open historical orders. The 14 open rows require case-by-case admin review; no task or old customer email was automatically created/sent.
++- UNKNOWN: delivery of historical order notifications and the exact cause/event details for 17 old failed webhook deliveries. Historical `side_effects_status='done'` is a no-resend guard, not proof of delivery.
++
++## Open priorities
++- **P0:** none known from the authorized renewal and review queue.
++- **P1:** review the 14 historical paid/open orders against fulfillment evidence, then apply reconciliation only to genuinely pending rows.
++- **P1:** run a real Klarna/delayed-payment end-to-end test when a safe test transaction is available.
++- **P1:** review the premium homepage preview/diff, then publish the frontend only after Hans explicitly approves it.
++- **P2:** rotate the Cloudflare token previously pasted in chat; reconcile repository Worker code with the verified live Worker before the next Worker deployment.
++
++## Tests and evidence
++- Independent Codex local validation at website commit `aa6dec89`: with Node 26, `NODE_OPTIONS=--no-experimental-webstorage` produced 19/19 files and 153/153 passing tests. Node 26 native `localStorage` otherwise caused four test-harness failures in jsdom; disabling that experimental Node feature restores the intended browser-like harness. TypeScript passed, and the production build completed with 134 prerendered routes and a 96-URL sitemap (exit 0). Optional PDF regeneration reported missing `xhtml2pdf`; it did not fail the site build.
++- Browser: 320/390/768/1440 CSS px rendered exactly six cards, the BMW image and semantic table with no horizontal overflow or page errors. Inputs are 16 px; CTAs are 48 px. Computed CTA contrast is 5.05:1 purchase, 4.99:1 petrol and 14.67:1 partner. Keyboard focus and reduced-motion behavior passed. The 384 px device-scale-2 run verified narrow reflow only; true browser 200% zoom was not verified.
++- Backend checks: unsigned/invalid Stripe webhook requests returned 400; deposit lease and order lease stale-owner/rollback tests passed. No real customer payment/refund, historical resend or live Klarna transaction was initiated.
++
++## Deployment and source sync
++- Live backend functions include the payment/deposit correctness fixes and both service-aware chat endpoints; both chat functions were redeployed after the separate Maksupalvelu boundary was confirmed.
++- Frontend changes remain preview-only and were not published in this work.
++- Website project: `venturecore/caars-bright-spark`, branch `main`, connected through the platform. The independent Codex validation source was local commit `aa6dec89`. No GitHub push for the final two fixes is claimed without remote proof.
++- Companion documentation in the separate `BraiGAIP/caars-backend` repository was reported pushed at `ccf947c`; it was not used as the website implementation repository.
++
++See `docs/ARCHITECTURE.md`, `docs/handoff/2026-10-04-session-report.md` and `docs/handoff/2026-10-04-ui-ux-update.md`.
+
+--- a/docs/handoff/2026-10-04-session-report.md
++++ b/docs/handoff/2026-10-04-session-report.md
+@@ -67,3 +67,23 @@
+ - Desktop browser: financing and contact handoff drafts populated the composer without auto-send or URL leakage. Mobile 320 px: one bottom chat action, no overflow, no page errors.
+ - Full lint remains blocked by existing unrelated errors. Frontend was not published. No customer payment, refund, old-mail resend or purchase was made.
+ - GitHub connection is platform-verified by Hans (`venturecore/caars-bright-spark`, `main`, in sync); the sandbox cannot verify a new commit SHA or push.
++
++## Addendum — mandatory AI boundaries, service isolation and masthead
++- Expanded the shared mandatory AI safety block and kept it outside the admin-replaceable prompt in both endpoints. Corrected contradictory knowledge-base statements about condition verification, physical inspection and payment inclusion.
++- Routed the financing CTA directly to `/rahoitus-ja-vaihtoauto` and changed web-chat sessions from one cross-service ID to one ID per validated service. The anonymous visitor ID remains separate and shared for analytics.
++- Scoped the legacy light-theme compatibility rules so intentional brand surfaces retain their color. Replaced the overlay hero with a 55% text / 45% 16:10 BMW photograph layout; mobile stacks the image below the text. Replaced technical handoff wording with a customer benefit.
++- Changed files: `supabase/functions/_shared/serviceContext.ts`, `supabase/functions/_shared/kbContent.ts`, `src/lib/chatCtaActions.ts`, `src/lib/chatSession.ts`, `src/components/ChatBot.tsx`, `src/components/ServiceCardsHero.tsx`, `src/components/Pricing.tsx`, `src/styles/public-light.css`, `src/index.css`, `src/test/chatSessionServiceScope.test.ts`, `src/test/p0Durability.static.test.ts`, `AGENTS.md`, `docs/ARCHITECTURE.md`, `docs/STATE.md`, this report, and `roadmap.md`.
++- Deployed: `claude-chat`, fallback `chat`. Frontend not published.
++- Verification: focused tests 32/32; full suite 149/149; typecheck passed; production build passed with 134 prerendered routes. Browser at 1280/320 px: six cards, BMW image, zero overflow, no page errors; mobile had one fixed customer action. Screenshots inspected.
++- Build warnings: existing optional audit-PDF generator dependency was absent, Browserslist data was stale, and existing chunk-size/dynamic-import warnings remained. These did not fail the production build.
++- Source control: platform connection remains verified by Hans; this sandbox still cannot provide a new commit SHA or prove a push.
++
++## Final completion check (2026-10-04)
++- Kept the verified split masthead: text and the BMW photograph are separate at 1280 px and stacked at 320 px; neither viewport has horizontal overflow or text/photo overlap.
++- Updated `CookieConsent.tsx` to semantic light-theme card/text/border tokens. Accept uses the accessible teal CTA (measured 4.99:1); necessary-only remains a prominent opaque button. The banner is above the single chat action and scrolls within the viewport if needed.
++- Updated `serviceHandoff.ts` so the default `sessionStorage` getter is accessed only inside guarded code. Added a test where the getter throws: router-state handoff still succeeds, storage fallback returns null and clearing does not crash.
++- Rewrote `docs/STATE.md` as one current summary; updated `docs/ARCHITECTURE.md` for final owner-token RPCs, both chats, private handoff and routing; updated `roadmap.md` checks.
++- Final changed files: `src/components/CookieConsent.tsx`, `src/lib/serviceHandoff.ts`, `src/test/serviceHandoff.test.ts`, `docs/STATE.md`, `docs/ARCHITECTURE.md`, `docs/handoff/2026-10-04-session-report.md`, `roadmap.md`.
++- Clean `npm ci` passed; focused tests passed 23/23; the complete suite passed 18/18 files and 150/150 tests. TypeScript and final preview build evidence are recorded in `docs/STATE.md`.
++- Frontend was not published. No purchase, Max mode, payment/refund, customer message or historical resend was used.
++- Website Git sync remains platform-verified (`venturecore/caars-bright-spark`, `main`, “In sync with GitHub”); the sandbox remote is not exposed. Companion docs were reported pushed separately to `BraiGAIP/caars-backend` at `ccf947c`.
+
+--- /dev/null
++++ b/docs/handoff/2026-10-04-ui-ux-update.md
+@@ -0,0 +1,64 @@
++# Premium UI/UX update — 2026-10-04
++
++## Scope and source
++- Implemented against the latest website source after the payment, deposit, chat-safety, private-handoff and SEO fixes.
++- Three external Codex role teams read the agency role files and supplied the consolidated specification. The exact CRO role file was absent, so Codex used the closest `marketing-growth-hacker` role. This provenance came from the external Codex review; Hans did not personally report reading those files.
++- The user clarified that Maksupalvelu is a separate 149 € service, never included in Tuontipalvelu. Public descriptions, the knowledge base and both chat boundaries were aligned without changing checkout amounts, service routes or historical orders.
++
++## Initial → final
++- Initial: six functional cards used arbitrary teal/orange/green service colors, 44 px controls, a generic card hierarchy and a list-like cost example.
++- Final: the existing split BMW masthead remains; the service area uses a cool-neutral/soft-teal canvas, 22 px cards, 24 px padding and role-based CTA hierarchy. Purchase services share one accessible orange CTA; Etsintä/contact use petrol outlines; finance has a muted partner surface, a visible `Kumppanipalvelu · Autohalli` badge and a neutral internal CTA.
++- Trust statements remain exactly: `Yli 900 tuotua autoa`, `4,9 / 5 asiakkaiden arvio`, `Palvelu koko Suomeen`. No metric or partner logo was added.
++- The Tesla example is now a semantic table with a caption, row headers, right-aligned tabular amounts and a teal total footer. The existing vehicle/import/tax/registration values and approximate total remain; a separate note says the optional 149 € Maksupalvelu is not included in that total.
++- Final review reduced desktop card bands from 76/52/114/146 px to 64/48/72/120 px for heading/price/description/field. This removes excess blank space while preserving shared CTA and control alignment and all copy.
++- Because the ≤480 px table presentation changes native table elements to block layout, explicit `table`, `rowgroup`, `row`, `rowheader` and `cell` roles now preserve the intended accessibility hierarchy alongside the native elements and caption.
++
++## Design system decisions
++- Homepage-scoped semantic values: canvas `195 23% 97%`, white surface, partner surface `195 20% 94%`, border `194 20% 88%`, petrol `177 88% 26%`, purchase orange `24 90% 38%`.
++- Card roles are structural data: `purchase` = Perusselvitys/TuontiApu/Tuontipalvelu, `secondary` = Etsintä/yhteys, `partner` = rahoitus/vaihtoauto.
++- Inputs, selects, textareas and CTAs are at least 48 px tall; public service-card input text is 16 px at every tested width. Labels remain persistent and decorative field icons are hidden from assistive technology.
++- Hover lift is 3 px over 180 ms on hover-capable pointers. Focus-within strengthens the border without movement; arrows move 3 px over 160 ms; active CTAs move 1 px. Reduced-motion removes these transitions and transforms.
++- Styles are scoped to `.home-premium` and `.home-cost-module`; admin and payment views are not restyled.
++
++## Changed files
++- `src/components/ServiceCardsHero.tsx`
++- `src/components/HeroPriceExample.tsx`
++- `src/index.css`
++- `src/components/__tests__/ServiceCardsHero.test.tsx`
++- `src/components/__tests__/HeroPriceExample.test.tsx`
++- `src/test/pricing.regression.test.ts`
++- `src/components/Pricing.tsx`
++- `src/components/IntentRouting.tsx`
++- `src/pages/CarVerticalPage.tsx`
++- `src/pages/Index.tsx`
++- `shared/pricing.json`
++- `public/llms.txt`
++- `supabase/functions/_shared/serviceContext.ts`
++- `supabase/functions/_shared/salesQualification.ts`
++- `AGENTS.md`
++- `docs/STATE.md`
++- `docs/ARCHITECTURE.md`
++- `roadmap.md`
++- this report
++
++## Actual checks
++- Locked clean install: `npm ci` passed; manifest and lock remained unchanged.
++- Independent Codex local validation at `aa6dec89`: 19/19 files and 153/153 tests passed with Node 26 and `NODE_OPTIONS=--no-experimental-webstorage`. Without that option, Node 26's experimental native `localStorage` caused four jsdom harness failures; this was a harness condition, not four application failures. Coverage included 15 card/handoff checks, semantic cost-table checks, role hierarchy and both chat paths' shared separate-Maksupalvelu boundary.
++- TypeScript: `bunx tsgo --noEmit -p tsconfig.app.json` passed.
++- Independent production build completed with 134 prerendered routes and a 96-URL sitemap (exit 0). Optional PDF regeneration warned that `xhtml2pdf` was unavailable; that optional artifact was not part of the successful site build.
++- Browser: 320, 390, 768 and 1440 CSS px passed. A 384 CSS px run at device scale 2 verified narrow reflow only; it did not verify true 200% browser zoom. Every checked case had exactly six cards, the BMW image and semantic table, six 16 px controls, 48 px CTAs, no horizontal overflow and no page errors.
++- CTA contrast from computed colors: purchase 5.05:1, petrol outline 4.99:1, partner 14.67:1. Title, field and CTA each accepted visible keyboard focus. Reduced-motion computed transition duration was `0s` and transform `none`.
++- Browser and DOM tests confirm all six populated drafts use router state plus service-isolated session storage, survive remount, keep clean query/hash and trigger no network send. Empty heading/submit navigation stores no draft.
++- Final 320 and 1440 masthead/card/table screenshots were captured and inspected.
++
++## Source and deployment truth
++- Independent Codex local validation used website commit `aa6dec89`. The website project remains `venturecore/caars-bright-spark` on `main`, connected through the platform. No GitHub push for the final two fixes is claimed without remote proof.
++- Companion repository remains separate; Codex will independently review/archive/push its companion diff. The website implementation does not use the companion Python repository.
++- Frontend was not published. No purchase, refund, live Klarna transaction, customer message, historical resend, credit purchase or Max mode was used.
++- Server checkout amounts and existing service routes were not changed. No historical paid-order content was changed.
++- Both service-aware chat functions were redeployed with the shared mandatory boundary. The knowledge-base text already stated the same rule and required no content change.
++
++## Limits and next tasks
++- Visual checks covered the requested public homepage surfaces, not a full-site visual regression.
++- A real delayed Klarna payment remains untested. Historical notification delivery for 17 old webhook failures remains unknown; 18 paid orders remain persisted, classified 4 handled / 14 open, with no automatic resend.
++- Next: Hans reviews the preview/diff. Publish only after explicit approval; separately review the 14 open historical orders against fulfillment evidence.
+
+--- a/public/llms.txt
++++ b/public/llms.txt
+@@ -11,7 +11,7 @@
+ - [Etsintäpalvelu+ (99 €)](/auton-etsinta): Sama etsintä sekä Perusselvitys (VIN, taustat, huoltohistoria, katsastukset) yhdestä valitusta autosta. Hyvitetään Avaimet käteen -tuonnissa.
+ - [Maksupalvelu (149 €)](/maksupalvelu): Kansainvälinen automaksu, valuutanvaihto pankin valuuttasopimuksella ja maksun ajoituksen koordinointi. Säästö tyypillisesti 3–4 % ostohinnasta. Palvelumaksua ei hyvitetä.
+ - [TuontiApu (250 €)](/tuontiapu): Henkilökohtainen apu Caarsin asiantuntijalta koko maahantuontiprosessin ajan, sekä kirjalliset vaihe vaiheelta -ohjeet dokumenteista, viranomaisilmoituksista, rekisteröinnistä ja katsastuksesta. Ei sisällä myyjän kontaktointia tai hintaneuvottelua ulkomailla.
+-- [Avaimet käteen -tuonti](/auton-tuontipalvelu): Ruotsista alk. 1 290 €, Saksasta alk. 1 990 €. Sisältää tarkistuksen, neuvottelun, maksun, vakuutetun rahdin Suomeen ja paperit. Toimitus sovittuun luovutuspisteeseen (ei kotiovelle).
++- [Avaimet käteen -tuonti](/auton-tuontipalvelu): Ruotsista alk. 1 290 €, Saksasta alk. 1 990 €. Sisältää sovitun tarjouksen mukaan taustojen selvityksen, neuvottelun, vakuutetun rahdin Suomeen ja dokumentit. Toimitus sovittuun luovutuspisteeseen (ei kotiovelle). Maksupalvelu 149 € on erillinen palvelu eikä sisälly tuontiin.
+ - [Hinnasto](/hinnasto): Kaikki palvelut, kuljetushinnat ja hyvityssäännöt.
+ 
+ ## Maakohtaiset säännöt
+
+--- a/roadmap.md
++++ b/roadmap.md
+@@ -19,15 +19,39 @@
+ - 23.9.2026: /autoliikkeille ja /palvelut molemmat 200 (VERIFIED curlilla). Hans pyysi indeksoinnin Search Consolessa molemmille.
+ 
+ ## 2026-09-30 — Security fixes (selected findings)
+-- [ ] Add hard anti-abuse floors to claude-chat (per-IP burst + hard caps) — findings lov_finding_92719771319a6e38_1a0dfa74 / _ef1b2f34
+-- [ ] Resolve market-images public read policy finding (lov_db_storage_objects_owner_unbound_v1_f5ab0f7b102c37d7) — intentional public listing images; propose ignore
++- [x] Add hard anti-abuse floors to claude-chat (per-IP burst + hard caps) — findings lov_finding_92719771319a6e38_1a0dfa74 / _ef1b2f34
++- [x] Resolve market-images public read policy finding (lov_db_storage_objects_owner_unbound_v1_f5ab0f7b102c37d7) — intentional public listing-image read policy documented and finding handled
++- [x] Append mandatory AI boundaries after custom prompts in both endpoints; correct KB condition/payment claims
++- [x] Scope web-chat conversation IDs by service while retaining a separate anonymous analytics identity
++- [x] Restore the light branded 55/45 automotive masthead and prevent legacy light CSS from flattening brand panels
+ 
+ ## 2026-10-03 — Caars renewal
+ - [x] P0 stripe-webhook retry/idempotency + per-order task (deployed, DB self-test passed)
+ - [x] Stripe reconciliation (18/18 sessions ↔ orders)
+-- [ ] Admin decision: create tasks for 18 old paid orders (cc_reconcile_order_tasks)
++- [ ] Admin review: 14 historic paid/open orders may need tasks; 4 handled orders must not be backfilled. Blocked on case-by-case fulfillment evidence.
+ - [x] Homepage six service cards + session-local handoff
+ - [x] Light theme whole public site; brand-depth correction in final validation
+ - [x] Service-context chatbots (no financing → Perusselvitys hijack)
+ - [x] SEO/AEO for six routes + /rahoitus-ja-vaihtoauto
+ - [x] Germany 1 990 € pricing decision
++
++## 2026-10-04 — P0 correctness follow-up
++- [x] Deposit confirmation owner-token lease, retryable busy/missing states and stale-owner test
++- [x] Atomic, idempotent paid-order CRM link/stage/activity
++- [x] Shared validated service context in primary and fallback chat
++- [x] Financing/contact chat draft opens without auto-send
++- [x] One mobile floating chat action; WhatsApp remains in page content
++- [x] Homepage faint-label and conflicting second-car promise correction
++- [x] Evästebannerin saavutettavat brändivärit ja välttämättömien evästeiden esteetön valinta
++- [x] Palvelukorttien handoff toimii myös, kun selain estää sessionStorage-getterin
++- [x] Lopullinen 320/1280 px tarkistus: ei ylivuotoa eikä masthead-tekstin ja autokuvan päällekkäisyyttä
++- [x] STATE tiivistetty yhdeksi ristiriidattomaksi CURRENT-yhteenvedoksi; arkkitehtuuri ja handoff päivitetty
++
++## 2026-10-04 — Premium homepage UI/UX
++- [x] Yhtenäistetty kuusi bento-palvelukorttia rooleihin: ostettavat oranssi, etsintä/yhteys petroolireuna, Autohalli neutraali kumppanipinta.
++- [x] Säilytetty erillinen teksti–BMW-kuva-masthead ja lisätty kolme nykyisiin väitteisiin perustuvaa kuvakemerkkiä.
++- [x] Muutettu Tesla-esimerkki semanttiseksi responsiiviseksi taulukoksi muuttamatta summia tai huomautuksia.
++- [x] Eritelty Maksupalvelu omaksi 149 € palvelukseen julkisissa kuvauksissa, tietopankissa ja molempien keskusteluavustajien pakollisissa rajoissa; Tesla-esimerkin summa ei sisällä sitä.
++- [x] Varmennettu Codex-ajossa 153/153 testiä Node 26:n kokeellinen web storage poistettuna, TypeScript, tuotantokäännös 134 reitillä ja 96 URL:n sivukartalla sekä 320/390/768/1440 px näkymät, fokus, reduced motion, 16 px kentät, 48 px CTA:t ja vähintään 4,99:1 CTA-kontrasti. 384 px/device-scale-2 varmisti uudelleenrivityksen, ei todellista 200 % selainzoomausta.
++- [x] Tiivistetty työpöytäkorttien sisältöalueet 64/48/72/120 px:iin ja lisätty pinotun kustannustaulukon eksplisiittiset saavutettavuusroolit sekä DOM-varmennukset.
++- [ ] Hans tarkistaa premium-esikatselun ja diffin; frontend julkaistaan vain erillisellä hyväksynnällä.
+
+--- a/shared/pricing.json
++++ b/shared/pricing.json
+@@ -93,7 +93,7 @@
+       "swedenFromLabel": "alk. 1 290 €",
+       "germanyFromPrice": 1990,
+       "germanyFromLabel": "alk. 1 990 €",
+-      "description": "Täyden palvelun tuonti Ruotsista tai Saksasta Suomeen: taustojen selvitys, neuvottelu, maksu, kuljetus, dokumentit ja kirjalliset viranomaisohjeet.",
++      "description": "Sovitun laajuuden autotuonti Ruotsista tai Saksasta Suomeen: taustojen selvitys, neuvottelu, vakuutettu kuljetus, dokumentit ja kirjalliset viranomaisohjeet. Maksupalvelu 149 € on erillinen palvelu eikä sisälly tuontiin.",
+       "shortDescription": "Täyden palvelun autotuonti Ruotsista tai Saksasta.",
+       "creditRule": "Aiemmin maksettu Perusselvitys 79 €, Etsintäpalvelu 79 € tai Etsintäpalvelu + 99 € vähennetään tuontihinnasta. Maksupalvelua ei hyvitetä."
+     }
+
+--- a/src/components/ChatBot.tsx
++++ b/src/components/ChatBot.tsx
+@@ -131,7 +131,7 @@
+     };
+ 
+     try {
+-      const resp = await postChatRequest(allMessages, touchSession(), serviceRef.current);
++      const resp = await postChatRequest(allMessages, touchSession(serviceRef.current), serviceRef.current);
+ 
+       if (!resp.ok || !resp.body) {
+         const err = await resp.json().catch(() => ({}));
+@@ -465,7 +465,7 @@
+ 
+                 {askContact && !isLoading && (
+                   <ChatContactCapture
+-                    sessionId={getSessionId()}
++                    sessionId={getSessionId(false, serviceRef.current)}
+                     context={[...messages].reverse().find((m) => m.role === "user")?.content}
+                     variant="light"
+                     onDone={() => setAskContact(false)}
+
+--- a/src/components/CookieConsent.tsx
++++ b/src/components/CookieConsent.tsx
+@@ -68,16 +68,16 @@
+         animate={{ y: 0, opacity: 1 }}
+         exit={{ y: 100, opacity: 0 }}
+         transition={{ type: "spring", damping: 25 }}
+-        className="fixed bottom-0 left-0 right-0 z-[100] p-3 sm:p-6"
++        className="fixed bottom-0 left-0 right-0 z-[130] p-3 sm:p-6"
+       >
+-        <div className="max-w-3xl mx-auto bg-[hsl(220_25%_8%)] border border-[hsl(0_0%_100%/0.1)] rounded-2xl shadow-2xl p-5 sm:p-8 backdrop-blur-xl">
++        <div className="mx-auto max-h-[calc(100dvh-1.5rem)] max-w-3xl overflow-y-auto rounded-lg border border-border bg-card p-5 text-card-foreground shadow-2xl sm:max-h-[calc(100dvh-3rem)] sm:p-8">
+           <div className="flex items-start gap-3 sm:gap-4 mb-5">
+-            <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
++            <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+               <Shield className="w-5 h-5 text-primary" />
+             </div>
+             <div className="flex-1">
+-              <h3 className="text-white font-bold text-base mb-1">Evästeasetukset</h3>
+-              <p className="text-[hsl(0_0%_100%/0.45)] text-sm leading-relaxed">
++              <h3 className="text-foreground font-bold text-base mb-1">Evästeasetukset</h3>
++              <p className="text-foreground/80 text-sm leading-relaxed">
+                 Käytämme evästeitä parantaaksemme sivuston toimintaa ja analysoidaksemme liikennettä.{" "}
+                 <a href="/tietosuoja" className="text-primary hover:underline">Lue Caarsin tietosuojaseloste.</a>
+               </p>
+@@ -93,7 +93,7 @@
+                 exit={{ height: 0, opacity: 0 }}
+                 className="overflow-hidden mb-5"
+               >
+-                <div className="space-y-3 pt-4 border-t border-[hsl(0_0%_100%/0.08)]">
++                <div className="space-y-3 pt-4 border-t border-border">
+                   <CookieToggle label="Välttämättömät" description="Sivuston perustoiminnot" checked={true} disabled />
+                   <CookieToggle
+                     label="Analytiikka"
+@@ -116,22 +116,23 @@
+           <div className="flex flex-col gap-2.5 sm:flex-row sm:gap-3">
+             <Button
+               onClick={acceptAll}
+-              className="bg-[hsl(174_72%_46%)] hover:bg-[hsl(174_72%_40%)] text-white font-bold rounded-xl h-12 sm:h-11 text-sm sm:flex-1"
++              variant="teal"
++              className="h-12 rounded-lg text-sm font-bold sm:h-11 sm:flex-1"
+             >
+               Hyväksy kaikki
+             </Button>
+             <Button
+               onClick={rejectNonEssential}
+-              variant="outline"
+-              className="border-[hsl(0_0%_100%/0.15)] text-white hover:bg-[hsl(0_0%_100%/0.08)] rounded-xl h-12 sm:h-11 text-sm sm:flex-1"
++              variant="secondary"
++              className="h-12 rounded-lg border border-border text-sm sm:h-11 sm:flex-1"
+             >
+               Vain välttämättömät
+             </Button>
+             {showSettings ? (
+               <Button
+                 onClick={saveSelected}
+-                variant="outline"
+-                className="border-primary/30 text-primary hover:bg-primary/10 rounded-xl h-12 sm:h-11 text-sm"
++                variant="teal"
++                className="h-12 rounded-lg text-sm sm:h-11"
+               >
+                 Tallenna valinnat
+               </Button>
+@@ -139,7 +140,7 @@
+               <Button
+                 onClick={() => setShowSettings(true)}
+                 variant="ghost"
+-                className="text-[hsl(0_0%_100%/0.4)] hover:text-white rounded-xl h-12 sm:h-11 text-sm"
++                className="h-12 rounded-lg text-sm text-foreground/80 hover:bg-muted hover:text-foreground sm:h-11"
+               >
+                 <Settings className="w-4 h-4 mr-1.5" />
+                 Asetukset
+@@ -157,13 +158,13 @@
+ }: {
+   label: string; description: string; checked: boolean; onChange?: (v: boolean) => void; disabled?: boolean;
+ }) => (
+-  <label className="flex items-center justify-between gap-4 p-3.5 rounded-xl bg-[hsl(0_0%_100%/0.03)] border border-[hsl(0_0%_100%/0.06)] cursor-pointer min-h-[48px]">
++  <label className="flex min-h-[48px] cursor-pointer items-center justify-between gap-4 rounded-lg border border-border bg-muted/50 p-3.5">
+     <div>
+-      <p className="text-white text-sm font-medium">{label}</p>
+-      <p className="text-[hsl(0_0%_100%/0.35)] text-xs">{description}</p>
++      <p className="text-foreground text-sm font-medium">{label}</p>
++      <p className="text-foreground/75 text-xs">{description}</p>
+     </div>
+-    <div className={`w-12 h-7 rounded-full transition-colors relative flex-shrink-0 ${checked ? "bg-[hsl(174_72%_46%)]" : "bg-[hsl(0_0%_100%/0.15)]"} ${disabled ? "opacity-60" : ""}`}>
+-      <div className={`absolute top-0.5 w-6 h-6 rounded-full bg-white shadow transition-transform ${checked ? "translate-x-[22px]" : "translate-x-0.5"}`} />
++    <div className={`w-12 h-7 rounded-full transition-colors relative flex-shrink-0 ${checked ? "bg-cta" : "bg-muted-foreground/35"} ${disabled ? "opacity-70" : ""}`}>
++      <div className={`absolute top-0.5 w-6 h-6 rounded-full bg-background shadow transition-transform ${checked ? "translate-x-[22px]" : "translate-x-0.5"}`} />
+       {!disabled && <input type="checkbox" className="sr-only" checked={checked} onChange={(e) => onChange?.(e.target.checked)} />}
+     </div>
+   </label>
+
+--- a/src/components/HeroPriceExample.tsx
++++ b/src/components/HeroPriceExample.tsx
+@@ -22,7 +22,7 @@
+     {
+       label: `${tuonti.name} (${stockholm.name})`,
+       value: stockholm.label,
+-      note: "Tarkistus, hintaneuvottelu, maksun hoito, vakuutettu rahti ja dokumentit",
++      note: "Taustojen selvitys, hintaneuvottelu, vakuutettu rahti ja dokumentit sovitun tarjouksen mukaan",
+     },
+     {
+       label: "Autovero",
+@@ -39,76 +39,85 @@
+   return (
+     <section
+       aria-label="Tuontikulujen esimerkkilaskelma ja linkki kustannuslaskuriin"
+-      className="border-y border-cta/20 bg-[hsl(var(--surface-teal-strong))]"
++      className="home-cost-module border-y border-border bg-[hsl(var(--surface-teal-strong))]"
+     >
+-      <div className="container mx-auto px-4 sm:px-6 py-12 md:py-16">
+-        <div className="mx-auto max-w-3xl">
++      <div className="container mx-auto px-4 py-14 sm:px-6 md:py-20">
++        <div className="mx-auto max-w-4xl">
+           <p className="text-xs font-bold uppercase tracking-widest text-primary mb-2">
+             Kustannuslaskuri
+           </p>
+           <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground mb-3 leading-tight">
+             Selvitä tuontisi kokonaiskustannus hetkessä
+           </h2>
+-          <p className="text-sm md:text-base text-muted-foreground mb-6 leading-relaxed">
+-            Syötä auton sijainti ja valitse tarvitsemasi palvelut — näet arvion kuljetuksesta,
+-            palvelumaksuista ja muista kuluista ilman yllätyksiä. Ei rekisteröitymistä.
++          <p className="mb-6 text-sm leading-relaxed text-muted-foreground md:text-base">
++            Syötä auton sijainti ja valitse tarvitsemasi palvelut. Saat suuntaa-antavan arvion
++            kuljetuksesta, palvelumaksuista ja muista kuluista ilman rekisteröitymistä.
+           </p>
+ 
+           <div className="mb-8 flex flex-col sm:flex-row gap-3">
+             <Link
+               to="/kustannuslaskuri"
+-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 h-14 text-base font-bold text-primary-foreground shadow-glow transition hover:opacity-90"
++              className="home-cost-action inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-primary px-6 text-base font-bold text-primary-foreground shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+             >
+               <Calculator className="w-5 h-5" />
+               Laske oman autosi tuontihinta
+             </Link>
+             <Link
+               to="/hinnasto"
+-              className="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-cta bg-background px-6 h-14 text-base font-bold text-cta transition hover:bg-cta/10"
++              className="home-cost-action inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border-2 border-cta bg-background px-6 text-base font-bold text-cta focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+             >
+               Katso hinnasto
+               <ArrowRight className="w-4 h-4" />
+             </Link>
+           </div>
+ 
+-          <div className="rounded-lg border border-cta/25 bg-card p-5 shadow-lg sm:p-7">
++          <div className="home-cost-card overflow-hidden border border-border bg-card shadow-lg">
++            <div className="p-5 pb-3 sm:p-7 sm:pb-4">
+             <p className="text-xs font-bold uppercase tracking-widest text-cta mb-3">
+               Esimerkkilaskelma
+             </p>
+             <h3 className="font-display text-lg md:text-xl font-bold text-foreground mb-4">
+               Tesla Model 3 Long Range — Tukholmasta Suomeen
+             </h3>
+-
+-            <ul className="divide-y divide-border">
++            </div>
++            <div className="overflow-x-auto">
++              <table role="table" className="w-full border-collapse text-left">
++                <caption className="sr-only">
++                  Havainnollinen arvio Tesla Model 3 Long Range -auton hinnasta ja tuontikuluista Tukholmasta Suomeen
++                </caption>
++                <tbody role="rowgroup" className="divide-y divide-border">
+                   {rows.map((r) => (
+-                <li key={r.label} className="py-3 first:pt-0">
+-                  <div className="flex items-baseline justify-between gap-4">
+-                    <span className="text-sm sm:text-base text-foreground/85">{r.label}</span>
+-                    <span className="text-sm sm:text-base font-bold text-foreground whitespace-nowrap">
++                    <tr role="row" key={r.label} className="align-top">
++                      <th role="rowheader" scope="row" className="px-5 py-4 text-sm font-semibold text-foreground sm:px-7 sm:text-base">
++                        {r.label}
++                        {r.note && <span className="mt-1 block text-xs font-normal leading-relaxed text-muted-foreground">{r.note}</span>}
++                      </th>
++                      <td role="cell" className="px-5 py-4 text-right text-sm font-bold tabular-nums text-foreground sm:px-7 sm:text-base">
+                         {r.value}
+-                    </span>
+-                  </div>
+-                  {r.note && (
+-                    <p className="mt-1 text-xs text-muted-foreground leading-relaxed">{r.note}</p>
+-                  )}
+-                </li>
++                      </td>
++                    </tr>
+                   ))}
+-            </ul>
+-
+-            <div className="mt-4 pt-4 border-t border-border flex items-baseline justify-between gap-4">
+-              <span className="text-base font-bold text-foreground">
++                </tbody>
++                <tfoot role="rowgroup">
++                  <tr role="row" className="home-cost-total">
++                    <th role="rowheader" scope="row" className="px-5 py-5 text-base font-extrabold text-foreground sm:px-7">
+                       Kokonaishinta Suomessa, valmiina ajoon
+-              </span>
+-              <span className="text-xl sm:text-2xl font-extrabold text-primary whitespace-nowrap">
++                    </th>
++                    <td role="cell" className="px-5 py-5 text-right text-xl font-extrabold tabular-nums text-primary sm:px-7 sm:text-2xl">
+                       n. 25 700 €
+-              </span>
++                    </td>
++                  </tr>
++                </tfoot>
++              </table>
+             </div>
+-
+-            <p className="mt-4 text-sm text-muted-foreground leading-relaxed">
+-              Vastaava auto Suomen käytettyjen markkinoilla tyypillisesti{" "}
+-              <span className="text-foreground font-semibold">28 000–30 000 €</span>. Esimerkissä
+-              säästöä kertyy siis reilusti, vaikka mukaan lasketaan kaikki tuontikulut.
+-              Omaa autoasi varten saat tarkan arvion kustannuslaskurista.
++            <p className="border-t border-border bg-muted/40 px-5 py-4 text-sm leading-relaxed text-foreground sm:px-7">
++              <span className="font-semibold">Maksupalvelu 149 € on erillinen valinnainen palvelu.</span>{" "}
++              Se ei sisälly tämän esimerkin noin 25 700 € kokonaishintaan.
++            </p>
++            <p className="border-t border-border px-5 py-5 text-sm leading-relaxed text-muted-foreground sm:px-7">
++              Vastaavan auton esimerkkihinta Suomen käytettyjen markkinoilla on{" "}
++              <span className="font-semibold text-foreground">28 000–30 000 €</span>. Hinnat ja kulut
++              vaihtelevat auton, sijainnin ja ajankohdan mukaan. Laske omalle autollesi suuntaa-antava arvio.
+             </p>
+           </div>
+         </div>
+
+--- a/src/components/IntentRouting.tsx
++++ b/src/components/IntentRouting.tsx
+@@ -528,7 +528,8 @@
+             </div>
+ 
+             <p className="text-[hsl(0_0%_88%)] text-base sm:text-lg leading-relaxed mb-6">
+-              Etsintä, taustojen selvitys, neuvottelu, maksu, kuljetus, dokumentit ja kirjalliset viranomaisohjeet yhdessä paketissa.
++              Etsintä, taustojen selvitys, neuvottelu, kuljetus, dokumentit ja kirjalliset viranomaisohjeet sovitun tarjouksen mukaan.
++              Maksupalvelu 149 € on erillinen palvelu.
+               Yksi tarjous, yksi yhteyshenkilö, yksi kokonaishinta.
+             </p>
+ 
+
+--- a/src/components/Pricing.tsx
++++ b/src/components/Pricing.tsx
+@@ -65,7 +65,7 @@
+     name: "Avaimet käteen -tuonti",
+     price: "1 290",
+     description: "Hoidamme tuonnin käytännön vaiheet puolestasi",
+-    clarifier: "Neuvottelu, maksu, kuljetus, dokumentit ja kirjalliset viranomaisohjeet — vakuutettu rahti Suomeen",
++    clarifier: "Neuvottelu, kuljetus, dokumentit ja kirjalliset viranomaisohjeet — vakuutettu rahti Suomeen. Maksupalvelu 149 € on erillinen palvelu.",
+     features: [
+       "Haku Turkuun",
+       "Viranomaisasioissa avustaminen",
+@@ -145,7 +145,7 @@
+   };
+ 
+   return (
+-    <section id="pricing" className="section-padding relative overflow-hidden">
++    <section id="pricing" className="brand-surface brand-contrast section-padding relative overflow-hidden">
+       {/* Dark section – strong contrast for white cards */}
+       <div className="absolute inset-0 bg-gradient-to-br from-[hsl(220_25%_6%)] via-[hsl(220_20%_10%)] to-[hsl(220_15%_14%)]" />
+       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,hsl(25_95%_53%/0.04),transparent_60%)]" />
+
+--- a/src/components/ServiceCardsHero.tsx
++++ b/src/components/ServiceCardsHero.tsx
+@@ -4,12 +4,16 @@
+   ArrowRight,
+   BadgeEuro,
+   CarFront,
+-  CheckCircle2,
+   ClipboardCheck,
++  Globe2,
+   Headphones,
++  Link2,
++  MapPinned,
+   MessageCircle,
++  MessageSquareText,
+   Search,
+   ShieldCheck,
++  Star,
+   type LucideIcon,
+ } from "lucide-react";
+ import { Button } from "@/components/ui/button";
+@@ -22,56 +26,48 @@
+ type CardStyle = {
+   icon: LucideIcon;
+   eyebrow: string;
+-  accent: string;
+-  iconStyle: string;
+-  buttonVariant: "default" | "teal" | "success" | "outline";
++  role: "purchase" | "secondary" | "partner";
+ };
+ 
+ const CARD_STYLES: Record<ServiceDef["id"], CardStyle> = {
+   perusselvitys: {
+     icon: ClipboardCheck,
+     eyebrow: "Kun auto on jo löytynyt",
+-    accent: "border-t-cta",
+-    iconStyle: "bg-cta/10 text-cta",
+-    buttonVariant: "teal",
++    role: "purchase",
+   },
+   etsinta: {
+     icon: Search,
+     eyebrow: "Kun tarvitset vaihtoehdot",
+-    accent: "border-t-primary",
+-    iconStyle: "bg-primary/10 text-primary",
+-    buttonVariant: "default",
++    role: "secondary",
+   },
+   tuontiapu: {
+     icon: Headphones,
+     eyebrow: "Kun tuot itse",
+-    accent: "border-t-success",
+-    iconStyle: "bg-success/10 text-success",
+-    buttonVariant: "success",
++    role: "purchase",
+   },
+   tuontipalvelu: {
+     icon: CarFront,
+     eyebrow: "Kun haluat valmiin kokonaisuuden",
+-    accent: "border-t-cta",
+-    iconStyle: "bg-cta/10 text-cta",
+-    buttonVariant: "teal",
++    role: "purchase",
+   },
+   yhteys: {
+     icon: MessageCircle,
+     eyebrow: "Kun haluat puhua ensin",
+-    accent: "border-t-success",
+-    iconStyle: "bg-success/10 text-success",
+-    buttonVariant: "success",
++    role: "secondary",
+   },
+   rahoitus: {
+     icon: BadgeEuro,
+     eyebrow: "Autohallin kautta",
+-    accent: "border-t-primary",
+-    iconStyle: "bg-primary/10 text-primary",
+-    buttonVariant: "outline",
++    role: "partner",
+   },
+ };
+ 
++const FIELD_ICONS: Record<ServiceDef["input"]["kind"], LucideIcon> = {
++  url: Link2,
++  text: MessageSquareText,
++  topic: Globe2,
++};
++
+ /** Homepage: six light service cards. Input is optional; heading link works without it. */
+ function ServiceCard({ s }: { s: ServiceDef }) {
+   const navigate = useNavigate();
+@@ -79,6 +75,7 @@
+   const inputId = `card-${s.id}-input`;
+   const style = CARD_STYLES[s.id];
+   const Icon = style.icon;
++  const FieldIcon = FIELD_ICONS[s.input.kind];
+ 
+   const go = (e: React.FormEvent) => {
+     e.preventDefault();
+@@ -96,35 +93,43 @@
+   return (
+     <form
+       onSubmit={go}
+-      className={`group flex min-h-full flex-col overflow-hidden rounded-lg border border-border border-t-4 bg-card p-5 shadow-card transition duration-300 hover:-translate-y-1 hover:shadow-card-hover ${style.accent}`}
++      className="home-service-card group flex min-h-full flex-col p-6"
+       aria-labelledby={`card-${s.id}-title`}
+       data-service-card={s.id}
++      data-card-role={style.role}
+     >
+-      <div className="flex items-start justify-between gap-4">
++      <div className="home-service-card__heading flex items-start justify-between gap-4">
+         <div>
+-          <p className="mb-2 text-xs font-bold uppercase text-foreground">{style.eyebrow}</p>
+-          <h2 id={`card-${s.id}-title`} className="text-xl font-extrabold normal-case tracking-normal">
+-            <Link to={s.route} className="text-foreground underline-offset-4 hover:text-primary hover:underline">
++          <p className="mb-2 text-xs font-bold uppercase text-muted-foreground">{style.eyebrow}</p>
++          <h2 id={`card-${s.id}-title`} className="text-xl font-extrabold normal-case leading-tight tracking-normal md:text-[22px]">
++            <Link to={s.route} className="rounded-sm text-foreground underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+               {s.title}
+             </Link>
+           </h2>
+         </div>
+-        <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ${style.iconStyle}`} aria-hidden>
+-          <Icon className="h-5 w-5" />
++        <span className="home-service-card__icon flex h-12 w-12 shrink-0 items-center justify-center rounded-xl" aria-hidden>
++          <Icon className="h-6 w-6" />
+         </span>
+       </div>
+-      <p className="mt-2 text-base font-extrabold text-foreground">{s.price}</p>
+-      <p className="mt-2 text-sm text-foreground/80">{s.what}</p>
+-      <div className="mt-4 flex-1">
+-        <label htmlFor={inputId} className="mb-1 block text-sm font-medium text-foreground">
+-          {s.input.label} <span className="font-normal text-foreground/75">(valinnainen)</span>
++      {style.role === "partner" && (
++        <p className="home-partner-badge mt-4 w-fit rounded-full px-3 py-1 text-xs font-bold">
++          Kumppanipalvelu · Autohalli
++        </p>
++      )}
++      <p className="home-service-card__price mt-4 text-lg font-extrabold leading-snug text-foreground">{s.price}</p>
++      <p className="home-service-card__description mt-3 text-sm leading-relaxed text-muted-foreground">{s.what}</p>
++      <div className="home-service-card__field mt-5 flex-1">
++        <label htmlFor={inputId} className="mb-2 block text-sm font-semibold text-foreground">
++          {s.input.label} <span className="font-normal text-muted-foreground">(valinnainen)</span>
+         </label>
++        <div className="relative">
++          <FieldIcon className="pointer-events-none absolute left-3.5 top-4 h-[18px] w-[18px] text-muted-foreground" aria-hidden />
+           {s.input.kind === "topic" ? (
+             <select
+               id={inputId}
+               value={value}
+               onChange={(e) => setValue(e.target.value)}
+-            className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
++              className="home-service-control min-h-12 w-full rounded-lg border border-input bg-background py-3 pl-11 pr-9 text-base text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+             >
+               <option value="">Valitse…</option>
+               {s.input.options.map((o) => (
+@@ -132,67 +137,75 @@
+               ))}
+             </select>
+           ) : s.input.kind === "url" ? (
+-          <Input id={inputId} type="url" inputMode="url" value={value} onChange={(e) => setValue(e.target.value)} placeholder={s.input.placeholder} maxLength={500} className="h-11 bg-background" />
++            <Input id={inputId} type="url" inputMode="url" value={value} onChange={(e) => setValue(e.target.value)} placeholder={s.input.placeholder} maxLength={500} className="home-service-control min-h-12 bg-background pl-11 text-base md:text-base" />
+           ) : (
+-          <Textarea id={inputId} value={value} onChange={(e) => setValue(e.target.value)} placeholder={s.input.placeholder} maxLength={1000} rows={2} className="resize-none bg-background" />
++            <Textarea id={inputId} value={value} onChange={(e) => setValue(e.target.value)} placeholder={s.input.placeholder} maxLength={1000} rows={2} className="home-service-control min-h-24 resize-none bg-background py-3 pl-11 text-base" />
+           )}
+         </div>
+-      <Button type="submit" variant={style.buttonVariant} className="mt-4 h-11 w-full font-bold">
++      </div>
++      <Button type="submit" variant="secondary" className="home-service-card__cta mt-5 min-h-12 w-full font-bold">
+         {s.cta}
+-        <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
++        <ArrowRight className="home-service-card__arrow ml-1 h-4 w-4" aria-hidden />
+       </Button>
+     </form>
+   );
+ }
+ 
+ const ServiceCardsHero = () => (
+-  <section className="relative overflow-hidden bg-background" aria-labelledby="services-heading">
+-    <div className="relative min-h-[500px] overflow-hidden pt-28 md:min-h-[560px] md:pt-32">
+-      <img
+-        src={heroCar}
+-        alt="Tumma henkilöauto pohjoismaisella tiellä"
+-        className="absolute inset-0 h-full w-full object-cover object-[62%_center]"
+-        loading="eager"
+-      />
+-      <div className="absolute inset-0 bg-[linear-gradient(90deg,hsl(var(--background))_0%,hsl(var(--background)/0.96)_39%,hsl(var(--background)/0.58)_64%,hsl(var(--background)/0.08)_100%)]" aria-hidden />
+-      <div className="absolute inset-0 bg-[linear-gradient(0deg,hsl(var(--background))_0%,transparent_34%)] md:bg-[linear-gradient(0deg,hsl(var(--background))_0%,transparent_24%)]" aria-hidden />
+-
+-      <div className="container relative z-10 mx-auto max-w-6xl px-4 pb-24 sm:px-6">
+-        <div className="max-w-2xl pt-8 md:pt-14">
+-          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-cta/30 bg-background/90 px-3 py-2 text-sm font-bold text-cta shadow-sm backdrop-blur-sm">
++  <section className="home-premium relative overflow-hidden bg-background" aria-labelledby="services-heading">
++    <div className="home-masthead border-b border-border pt-28 md:pt-32">
++      <div className="container mx-auto grid max-w-6xl items-center gap-8 px-4 pb-14 sm:px-6 md:grid-cols-[55fr_45fr] md:gap-12 md:pb-20">
++        <div className="py-4 md:py-10">
++          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-cta/30 bg-card px-3 py-2 text-sm font-bold text-cta shadow-sm">
+             <ShieldCheck className="h-4 w-4" aria-hidden />
+             Auton tuonti turvallisesti vuodesta 2016
+           </div>
+-          <h1 id="services-heading" className="max-w-xl text-4xl leading-[1.08] text-foreground sm:text-5xl md:text-6xl">
++          <h1 id="services-heading" className="max-w-xl font-display text-4xl font-extrabold leading-[1.08] text-foreground sm:text-5xl md:text-6xl">
+             Parempi auto samalla rahalla
+           </h1>
+           <p className="mt-5 max-w-xl text-base font-medium leading-relaxed text-foreground/80 md:text-xl">
+             Etsintä, taustat tai koko tuonti. Valitse tilanteeseesi sopiva palvelu Ruotsista tai Saksasta.
+           </p>
+-          <ul className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-sm font-semibold text-foreground/85">
+-            {["Yli 900 tuotua autoa", "4,9 / 5 asiakkaiden arvio", "Palvelu koko Suomeen"].map((item) => (
+-              <li key={item} className="flex items-center gap-2">
+-                <CheckCircle2 className="h-4 w-4 text-cta" aria-hidden />
+-                {item}
++          <ul className="mt-7 grid max-w-xl gap-3 sm:grid-cols-3">
++            <li className="home-trust-badge flex min-h-14 items-center gap-3 rounded-xl px-3 py-2 text-sm font-bold text-foreground">
++              <CarFront className="h-5 w-5 shrink-0 text-cta" aria-hidden />
++              Yli 900 tuotua autoa
++            </li>
++            <li className="home-trust-badge flex min-h-14 items-center gap-3 rounded-xl px-3 py-2 text-sm font-bold text-foreground">
++              <Star className="h-5 w-5 shrink-0 text-primary" aria-hidden />
++              4,9 / 5 asiakkaiden arvio
++            </li>
++            <li className="home-trust-badge flex min-h-14 items-center gap-3 rounded-xl px-3 py-2 text-sm font-bold text-foreground">
++              <MapPinned className="h-5 w-5 shrink-0 text-success" aria-hidden />
++              Palvelu koko Suomeen
+             </li>
+-            ))}
+           </ul>
+         </div>
++        <div className="home-hero-photo relative order-last aspect-[16/10] overflow-hidden border border-cta/25 bg-[hsl(var(--surface-teal-strong))] shadow-xl">
++          <img
++            src={heroCar}
++            alt="BMW pohjoismaisella tiellä"
++            className="h-full w-full object-cover object-center"
++            loading="eager"
++          />
++          <span className="absolute bottom-0 left-0 h-1.5 w-2/3 bg-[hsl(var(--brand-turquoise-bright))]" aria-hidden />
++          <span className="absolute bottom-0 right-0 h-1.5 w-1/3 bg-[hsl(var(--brand-orange-bright))]" aria-hidden />
++        </div>
+       </div>
+     </div>
+ 
+-    <div className="relative border-b border-cta/15 bg-[hsl(var(--surface-teal))] pb-16 md:pb-24">
++    <div className="home-services-band relative border-b border-border py-14 md:py-20">
+       <div className="container mx-auto max-w-6xl px-4 sm:px-6">
+-        <div className="relative z-20 -mt-16 mb-8 max-w-3xl rounded-lg border border-cta/20 bg-background/95 p-5 shadow-lg backdrop-blur-md md:-mt-20 md:p-7">
++        <div className="mb-9 max-w-3xl md:mb-11">
+           <p className="text-xs font-extrabold uppercase text-cta">Valitse seuraava askel</p>
+-          <h2 className="mt-2 text-2xl font-extrabold normal-case tracking-normal text-foreground md:text-3xl">
++          <h2 className="mt-2 text-2xl font-extrabold normal-case leading-tight tracking-normal text-foreground md:text-3xl">
+             Missä vaiheessa autokauppasi on?
+           </h2>
+           <p className="mt-2 text-sm leading-relaxed text-foreground/80 md:text-base">
+-            Voit jatkaa suoraan tai siirtää viestin, ilmoituslinkin tai aiheen turvallisesti valitulle palvelusivulle.
++            Kerro lähtötilanteesi kerran. Valitsemasi palvelu avautuu valmiina jatkamaan juuri siitä.
+           </p>
+         </div>
+-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
++        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
+           {SERVICES.map((s) => (
+             <ServiceCard key={s.id} s={s} />
+           ))}
+
+--- /dev/null
++++ b/src/components/__tests__/HeroPriceExample.test.tsx
+@@ -0,0 +1,43 @@
++import { render, screen, within } from "@testing-library/react";
++import { MemoryRouter } from "react-router-dom";
++import { describe, expect, it } from "vitest";
++import HeroPriceExample from "@/components/HeroPriceExample";
++
++const renderExample = () =>
++  render(
++    <MemoryRouter>
++      <HeroPriceExample />
++    </MemoryRouter>,
++  );
++
++describe("HeroPriceExample", () => {
++  it("presents the illustrative cost breakdown as an accessible table", () => {
++    renderExample();
++    const table = screen.getByRole("table", { name: /havainnollinen arvio/i });
++    const rowGroups = within(table).getAllByRole("rowgroup");
++    expect(rowGroups).toHaveLength(2);
++    expect(within(table).getAllByRole("row")).toHaveLength(5);
++    expect(within(table).getAllByRole("rowheader")).toHaveLength(5);
++    expect(within(table).getAllByRole("cell")).toHaveLength(5);
++    expect(table).toHaveAttribute("role", "table");
++    expect(rowGroups.every((group) => group.getAttribute("role") === "rowgroup")).toBe(true);
++    expect(within(table).getAllByRole("row").every((row) => row.getAttribute("role") === "row")).toBe(true);
++    expect(within(table).getAllByRole("rowheader").every((header) => header.getAttribute("role") === "rowheader")).toBe(true);
++    expect(within(table).getAllByRole("cell").every((cell) => cell.getAttribute("role") === "cell")).toBe(true);
++    expect(within(table).getByRole("rowheader", { name: /auton hinta ruotsissa/i })).toBeInTheDocument();
++    expect(within(table).getByRole("rowheader", { name: /kokonaishinta suomessa/i })).toBeInTheDocument();
++    expect(within(table).getByText("n. 25 700 €")).toBeInTheDocument();
++    expect(within(table).queryByText(/maksupalvelu/i)).not.toBeInTheDocument();
++    expect(screen.getByText(/maksupalvelu 149 € on erillinen valinnainen palvelu/i)).toBeInTheDocument();
++    expect(screen.getByText(/ei sisälly tämän esimerkin noin 25 700 € kokonaishintaan/i)).toBeInTheDocument();
++  });
++
++  it("keeps calculator and pricing navigation explicit", () => {
++    renderExample();
++    expect(screen.getByRole("link", { name: /laske oman autosi tuontihinta/i })).toHaveAttribute(
++      "href",
++      "/kustannuslaskuri",
++    );
++    expect(screen.getByRole("link", { name: /katso hinnasto/i })).toHaveAttribute("href", "/hinnasto");
++  });
++});
+
+--- a/src/components/__tests__/ServiceCardsHero.test.tsx
++++ b/src/components/__tests__/ServiceCardsHero.test.tsx
+@@ -50,6 +50,15 @@
+   rahoitus: { route: "/rahoitus-ja-vaihtoauto", price: "Kysy tarjous" },
+ };
+ 
++const EXPECTED_ROLES: Record<ServiceId, "purchase" | "secondary" | "partner"> = {
++  perusselvitys: "purchase",
++  etsinta: "secondary",
++  tuontiapu: "purchase",
++  tuontipalvelu: "purchase",
++  yhteys: "secondary",
++  rahoitus: "partner",
++};
++
+ const fetchSpy = vi.fn();
+ beforeEach(() => {
+   cleanup();
+@@ -65,6 +74,7 @@
+     expect(cards).toHaveLength(6);
+     for (const s of SERVICES) {
+       const card = container.querySelector(`[data-service-card="${s.id}"]`)!;
++      expect(card.getAttribute("data-card-role")).toBe(EXPECTED_ROLES[s.id]);
+       const link = card.querySelector("h2 a")!;
+       expect(link.getAttribute("href")).toBe(EXPECTED[s.id].route);
+       if (EXPECTED[s.id].price) expect(card.textContent).toContain(EXPECTED[s.id].price);
+@@ -72,6 +82,8 @@
+       const control = card.querySelector("input, textarea, select")!;
+       expect(card.querySelector(`label[for="${control.id}"]`)).not.toBeNull();
+     }
++    expect(screen.getByText("Kumppanipalvelu · Autohalli")).toBeInTheDocument();
++    expect(screen.getAllByRole("button", { name: /^jatka/i })).toHaveLength(6);
+   });
+ 
+   it.each(SERVICES.map((s) => [s.id, s] as const))(
+
+--- a/src/index.css
++++ b/src/index.css
+@@ -10,7 +10,7 @@
+   :root {
+     /* Dark grey base – clearly NOT black, lifted for breathing room */
+     --background: 40 20% 97%;
+-    --foreground: 220 25% 12%;
++    --foreground: 185 41% 13%;
+ 
+     /* Cards lifted ~7 percentage points above bg → instantly readable */
+     --card: 0 0% 100%;
+@@ -20,16 +20,29 @@
+     --popover-foreground: 220 25% 12%;
+ 
+     /* Brand orange – vibrant and warm */
+-    --primary: 25 90% 40%;
++    --primary: 24 90% 38%;
+     --primary-foreground: 0 0% 100%;
+ 
+     /* Teal CTA accent (legacy) */
+-    --cta: 174 80% 26%;
++    --cta: 177 88% 26%;
+     --cta-foreground: 0 0% 100%;
+ 
+     /* Light brand surfaces retain Caars turquoise without reducing readability. */
+     --surface-teal: 174 38% 94%;
+     --surface-teal-strong: 174 45% 89%;
++    --brand-turquoise-bright: 174 72% 50%;
++    --brand-orange-bright: 25 95% 56%;
++
++    /* Homepage premium system: scoped to .home-premium / .home-cost-module. */
++    --home-canvas: 195 23% 97%;
++    --home-surface: 0 0% 100%;
++    --home-partner: 195 20% 94%;
++    --home-border: 194 20% 88%;
++    --home-petrol: 177 88% 26%;
++    --home-petrol-soft: 174 42% 93%;
++    --home-orange: 24 90% 38%;
++    --home-shadow: 0 10px 30px -18px hsl(185 41% 13% / 0.28);
++    --home-shadow-hover: 0 18px 40px -20px hsl(185 41% 13% / 0.34);
+ 
+     /* Caars logo green – TRUST / SUCCESS / AI / LIVE DATA accent */
+     --brand-green: 152 70% 26%;
+@@ -528,3 +541,98 @@
+   animation: caarsPulseHighlight 1.4s ease-out 3;
+   border-radius: 12px;
+ }
++
++/* Homepage-only premium service system. Keeps admin and payment surfaces untouched. */
++.home-masthead { background: hsl(var(--home-canvas)); }
++.home-services-band { background: hsl(var(--home-petrol-soft)); }
++.home-hero-photo,
++.home-cost-card { border-radius: 24px; }
++.home-trust-badge {
++  border: 1px solid hsl(var(--home-border));
++  background: hsl(var(--home-surface));
++  box-shadow: var(--home-shadow);
++}
++.home-service-card {
++  border: 1px solid hsl(var(--home-border));
++  border-radius: 22px;
++  background: hsl(var(--home-surface));
++  box-shadow: var(--home-shadow);
++  transition: border-color 180ms ease-out, box-shadow 180ms ease-out, transform 180ms ease-out;
++}
++.home-service-card[data-card-role="partner"] { background: hsl(var(--home-partner)); }
++.home-service-card__icon {
++  color: hsl(var(--home-petrol));
++  background: hsl(var(--home-petrol-soft));
++}
++.home-service-card[data-card-role="purchase"] .home-service-card__icon {
++  color: hsl(var(--home-orange));
++  background: hsl(var(--primary) / 0.1);
++}
++.home-partner-badge {
++  color: hsl(var(--foreground));
++  border: 1px solid hsl(var(--home-border));
++  background: hsl(var(--home-surface));
++}
++.home-service-control { border-color: hsl(var(--input)); }
++.home-service-card__cta { min-height: 48px; }
++.home-service-card[data-card-role="purchase"] .home-service-card__cta {
++  color: hsl(var(--primary-foreground));
++  border-color: hsl(var(--home-orange));
++  background: hsl(var(--home-orange));
++}
++.home-service-card[data-card-role="secondary"] .home-service-card__cta {
++  color: hsl(var(--home-petrol));
++  border: 2px solid hsl(var(--home-petrol));
++  background: hsl(var(--home-surface));
++}
++.home-service-card[data-card-role="partner"] .home-service-card__cta {
++  color: hsl(var(--foreground));
++  border: 1px solid hsl(var(--muted-foreground));
++  background: hsl(var(--home-surface));
++}
++.home-service-card__arrow,
++.home-cost-action svg { transition: transform 160ms ease-out; }
++.home-cost-total { background: hsl(var(--home-petrol-soft)); }
++
++@media (min-width: 1024px) {
++  .home-service-card__heading { min-height: 64px; }
++  .home-service-card__price { min-height: 48px; }
++  .home-service-card__description { min-height: 72px; }
++  .home-service-card__field { min-height: 120px; }
++}
++
++@media (hover: hover) and (pointer: fine) {
++  .home-service-card:hover {
++    border-color: hsl(var(--home-petrol) / 0.55);
++    box-shadow: var(--home-shadow-hover);
++    transform: translateY(-3px);
++  }
++  .home-service-card:focus-within {
++    border-color: hsl(var(--ring));
++    box-shadow: var(--home-shadow-hover);
++  }
++  .home-service-card__cta:hover .home-service-card__arrow,
++  .home-cost-action:hover svg { transform: translateX(3px); }
++  .home-service-card__cta:active { transform: translateY(1px); }
++}
++
++@media (max-width: 480px) {
++  .home-cost-module table,
++  .home-cost-module tbody,
++  .home-cost-module tfoot,
++  .home-cost-module tr,
++  .home-cost-module th,
++  .home-cost-module td { display: block; width: 100%; }
++  .home-cost-module td { padding-top: 0; text-align: left; }
++  .home-cost-module tfoot td { padding-top: 0; }
++}
++
++@media (prefers-reduced-motion: reduce) {
++  .home-service-card,
++  .home-service-card__arrow,
++  .home-cost-action,
++  .home-cost-action svg {
++    transition: none !important;
++    transform: none !important;
++  }
++}
+
+--- a/src/lib/chatCtaActions.ts
++++ b/src/lib/chatCtaActions.ts
+@@ -23,7 +23,7 @@
+   palvelupaketti: { type: "navigate", url: "/hinnasto" },
+   haku: { type: "navigate", url: "/hinnasto" },
+   avaimet_kateen: { type: "navigate", url: "/hinnasto" },
+-  rahoitus: { type: "scroll", scrollTo: "financing" },
++  rahoitus: { type: "navigate", url: "/rahoitus-ja-vaihtoauto" },
+   yhteystiedot: { type: "scroll", scrollTo: "contact" },
+   tarjous: { type: "scroll", scrollTo: "contact" },
+   tarkistus: { type: "scroll", scrollTo: "quick-analyzer" },
+
+--- a/src/lib/chatSession.ts
++++ b/src/lib/chatSession.ts
+@@ -2,8 +2,8 @@
+  * Chatin tunnisteet: pysyvä kävijätunnus ja keskustelukohtainen istuntotunnus.
+  *
+  * - visitor_id: pysyvä UUID (localStorage `caars_visitor_id`). Ei vanhene.
+- * - session_id: keskustelukohtainen UUID (localStorage `caars_chat_session`).
+- *   Vanhenee, kun edellisestä aktiivisuudesta on yli 30 minuuttia.
++ * - session_id: palvelukohtainen UUID (localStorage `caars_chat_session:<service>`).
++ *   Vanhenee, kun kyseisen palvelun edellisestä aktiivisuudesta on yli 30 minuuttia.
+  *
+  * Migraatio: vanha `caars_web_chat_session_id` siirretään kävijätunnukseksi,
+  * jottei nykyisten kävijöiden historia katoa. Vanha avain poistetaan.
+@@ -39,9 +39,11 @@
+   }
+ }
+ 
+-function readSession(): StoredSession | null {
++const sessionKey = (service?: string | null) => `${SESSION_KEY}:${service || "global"}`;
++
++function readSession(service?: string | null): StoredSession | null {
+   try {
+-    const raw = localStorage.getItem(SESSION_KEY);
++    const raw = localStorage.getItem(sessionKey(service));
+     if (!raw) return null;
+     const parsed = JSON.parse(raw) as StoredSession;
+     if (!parsed?.id || typeof parsed.lastActivityAt !== "number") return null;
+@@ -51,9 +53,9 @@
+   }
+ }
+ 
+-function writeSession(s: StoredSession) {
++function writeSession(s: StoredSession, service?: string | null) {
+   try {
+-    localStorage.setItem(SESSION_KEY, JSON.stringify(s));
++    localStorage.setItem(sessionKey(service), JSON.stringify(s));
+   } catch {
+     /* privaattitila tms. — ei kaadeta chattia */
+   }
+@@ -64,19 +66,19 @@
+  * aktiivisuudesta on yli 30 min.
+  * @param touch päivittää lastActivityAt (kutsutaan kun käyttäjä lähettää viestin)
+  */
+-export function getSessionId(touch = false): string {
++export function getSessionId(touch = false, service?: string | null): string {
+   if (typeof window === "undefined") return uuid();
+   getVisitorId(); // varmistaa migraation
+   const now = Date.now();
+-  const cur = readSession();
++  const cur = readSession(service);
+   if (cur && now - cur.lastActivityAt <= SESSION_IDLE_MS) {
+-    if (touch) writeSession({ id: cur.id, lastActivityAt: now });
++    if (touch) writeSession({ id: cur.id, lastActivityAt: now }, service);
+     return cur.id;
+   }
+   const fresh: StoredSession = { id: uuid(), lastActivityAt: now };
+-  writeSession(fresh);
++  writeSession(fresh, service);
+   return fresh.id;
+ }
+ 
+ /** Merkitsee aktiivisuuden ja palauttaa keskustelutunnuksen. */
+-export const touchSession = () => getSessionId(true);
++export const touchSession = (service?: string | null) => getSessionId(true, service);
+
+--- a/src/lib/serviceHandoff.ts
++++ b/src/lib/serviceHandoff.ts
+@@ -57,10 +57,18 @@
+   return { service, message, carUrl, topic, ts: now };
+ }
+ 
+-export function saveHandoff(service: ServiceId, input: Partial<HandoffData>, storage: Storage = sessionStorage): HandoffData {
++function browserSessionStorage(): Storage | undefined {
++  try {
++    return globalThis.sessionStorage;
++  } catch {
++    return undefined;
++  }
++}
++
++export function saveHandoff(service: ServiceId, input: Partial<HandoffData>, storage?: Storage): HandoffData {
+   const data = clean(service, input);
+   try {
+-    storage.setItem(KEY(service), JSON.stringify(data));
++    (storage ?? browserSessionStorage())?.setItem(KEY(service), JSON.stringify(data));
+   } catch {
+     /* storage unavailable → router state still carries it */
+   }
+@@ -80,25 +88,27 @@
+ export function readHandoff(
+   service: ServiceId,
+   routerState?: unknown,
+-  storage: Storage = sessionStorage,
++  storage?: Storage,
+   now = Date.now(),
+ ): HandoffData | null {
+   const fromState = valid(service, (routerState as { handoff?: unknown } | null)?.handoff, now);
+   if (fromState) return fromState;
+   try {
+-    const raw = storage.getItem(KEY(service));
++    const activeStorage = storage ?? browserSessionStorage();
++    if (!activeStorage) return null;
++    const raw = activeStorage.getItem(KEY(service));
+     if (!raw) return null;
+     const v = valid(service, JSON.parse(raw), now);
+-    if (!v) storage.removeItem(KEY(service));
++    if (!v) activeStorage.removeItem(KEY(service));
+     return v;
+   } catch {
+     return null;
+   }
+ }
+ 
+-export function clearHandoff(service: ServiceId, storage: Storage = sessionStorage) {
++export function clearHandoff(service: ServiceId, storage?: Storage) {
+   try {
+-    storage.removeItem(KEY(service));
++    (storage ?? browserSessionStorage())?.removeItem(KEY(service));
+   } catch {
+     /* ignore */
+   }
+
+--- a/src/pages/CarVerticalPage.tsx
++++ b/src/pages/CarVerticalPage.tsx
+@@ -180,8 +180,8 @@
+               <div className="text-3xl font-bold mb-1">alk. 1 290 €</div>
+               <div className="text-xs text-[#7BA0F0] mb-4">sis. carVertical-raportin</div>
+               <p className="text-sm text-muted-foreground mb-5 flex-1">
+-                Hoidamme tuonnin Ruotsista – taustojen selvitys, maksu, kuljetus,
+-                dokumentit ja kirjalliset viranomaisohjeet. carVertical aina mukana.
++                Hoidamme tuonnin Ruotsista – taustojen selvitys, kuljetus,
++                dokumentit ja kirjalliset viranomaisohjeet. Maksupalvelu 149 € on erillinen palvelu. carVertical aina mukana.
+               </p>
+               <Button asChild variant="outline">
+                 <a href="/hinnasto">Katso hinnasto</a>
+
+--- a/src/pages/Index.tsx
++++ b/src/pages/Index.tsx
+@@ -98,7 +98,7 @@
+         { "@type": "Country", name: "Germany" },
+       ],
+       description:
+-        "Sovitun laajuuden autotuonti: taustojen selvitys, neuvottelu, maksu, vakuutettu rahti Suomeen ja toimitus sovittuun luovutuspisteeseen.",
++        "Sovitun laajuuden autotuonti: taustojen selvitys, neuvottelu, vakuutettu rahti Suomeen ja toimitus sovittuun luovutuspisteeseen. Maksupalvelu 149 € on erillinen palvelu.",
+       offers: {
+         "@type": "Offer",
+         price: "1290",
+
+--- a/src/styles/public-light.css
++++ b/src/styles/public-light.css
+@@ -7,10 +7,10 @@
+  */
+ 
+ /* Hardcoded white / near-white text → readable dark text, except on coloured buttons/badges */
+-html.theme-light :is([class~="text-white"], [class*="text-white/"], [class*="text-[hsl(0_0%_100%"], [class*="text-[#fff"], [class*="text-[#FFF"], .bright-text-primary):not(:is([class*="bg-primary"], [class*="bg-[#25D366]"], [class*="bg-green"], [class*="bg-destructive"], [class*="bg-cta"], [class*="bg-[hsl(25"], [class*="bg-[#F27A13]"], [class*="bg-orange"], .bright-cta, button[style*="gradient"], a[style*="gradient"])):not(:is([class*="bg-primary"], [class*="bg-[#25D366]"], [class*="bg-green"], [class*="bg-destructive"], [class*="bg-cta"], [class*="bg-[hsl(25"], [class*="bg-[#F27A13]"], [class*="bg-orange"], .bright-cta, button[style*="gradient"], a[style*="gradient"]) *) {
++html.theme-light :is([class~="text-white"], [class*="text-white/"], [class*="text-[hsl(0_0%_100%"], [class*="text-[#fff"], [class*="text-[#FFF"], .bright-text-primary):not(.brand-contrast):not(.brand-contrast *):not(:is([class*="bg-primary"], [class*="bg-[#25D366]"], [class*="bg-green"], [class*="bg-destructive"], [class*="bg-cta"], [class*="bg-[hsl(25"], [class*="bg-[#F27A13]"], [class*="bg-orange"], .bright-cta, button[style*="gradient"], a[style*="gradient"])):not(:is([class*="bg-primary"], [class*="bg-[#25D366]"], [class*="bg-green"], [class*="bg-destructive"], [class*="bg-cta"], [class*="bg-[hsl(25"], [class*="bg-[#F27A13]"], [class*="bg-orange"], .bright-cta, button[style*="gradient"], a[style*="gradient"]) *) {
+   color: hsl(var(--foreground)) !important;
+ }
+-html.theme-light :is([class*="text-white/5"], [class*="text-white/6"], [class*="text-white/7"], [class*="text-[hsl(0_0%_100%/0.6"], [class*="text-[hsl(0_0%_100%/0.7"], .bright-text-muted):not(:is([class*="bg-primary"], [class*="bg-[#25D366]"], [class*="bg-cta"]) *) {
++html.theme-light :is([class*="text-white/5"], [class*="text-white/6"], [class*="text-white/7"], [class*="text-[hsl(0_0%_100%/0.6"], [class*="text-[hsl(0_0%_100%/0.7"], .bright-text-muted):not(.brand-contrast):not(.brand-contrast *):not(:is([class*="bg-primary"], [class*="bg-[#25D366]"], [class*="bg-cta"]) *) {
+   color: hsl(var(--muted-foreground)) !important;
+ }
+ 
+@@ -19,7 +19,7 @@
+   background-color: transparent !important;
+ }
+ html.theme-light .fixed:is([class*="bg-black/"]) { background-color: hsl(220 25% 12% / 0.45) !important; }
+-html.theme-light :is([class*="from-[hsl(220"], [class*="from-[#1"], [class*="from-black"], [class*="bg-[hsl(20"], [class*="bg-[hsl(21"], [class*="bg-[hsl(22"], [class*="bg-[hsl(23"], [class*="bg-[#1"], [class*="bg-[#0"], [class*="bg-[#2"]) {
++html.theme-light :is([class*="from-[hsl(220"], [class*="from-[#1"], [class*="from-black"], [class*="bg-[hsl(20"], [class*="bg-[hsl(21"], [class*="bg-[hsl(22"], [class*="bg-[hsl(23"], [class*="bg-[#1"], [class*="bg-[#0"], [class*="bg-[#2"]):not(.brand-surface):not(.brand-surface *) {
+   background-image: none !important;
+   background-color: hsl(var(--muted)) !important;
+ }
+
+--- /dev/null
++++ b/src/test/chatSessionServiceScope.test.ts
+@@ -0,0 +1,47 @@
++import { beforeEach, describe, expect, it, vi } from "vitest";
++import { getSessionId, SESSION_IDLE_MS, touchSession } from "@/lib/chatSession";
++
++describe("service-scoped chat sessions", () => {
++  beforeEach(() => {
++    localStorage.clear();
++    vi.useRealTimers();
++  });
++
++  it("keeps separate conversation ids for separate services", () => {
++    const background = touchSession("perusselvitys");
++    const financing = touchSession("rahoitus");
++    expect(background).not.toBe(financing);
++    expect(getSessionId(false, "perusselvitys")).toBe(background);
++    expect(getSessionId(false, "rahoitus")).toBe(financing);
++  });
++
++  it("keeps the anonymous visitor id independent of service conversations", () => {
++    touchSession("etsinta");
++    touchSession("yhteys");
++    const visitorKeys = Object.keys(localStorage).filter((key) => key === "caars_visitor_id");
++    const sessionKeys = Object.keys(localStorage).filter((key) => key.startsWith("caars_chat_session:"));
++    expect(visitorKeys).toHaveLength(1);
++    expect(sessionKeys.sort()).toEqual(["caars_chat_session:etsinta", "caars_chat_session:yhteys"]);
++  });
++
++  it("expires one service without replacing another service session", () => {
++    vi.useFakeTimers();
++    vi.setSystemTime(new Date("2026-10-04T06:00:00Z"));
++    const first = touchSession("perusselvitys");
++    vi.setSystemTime(new Date(Date.now() + SESSION_IDLE_MS + 1));
++    const other = touchSession("tuontiapu");
++    const renewed = getSessionId(false, "perusselvitys");
++    expect(renewed).not.toBe(first);
++    expect(getSessionId(false, "tuontiapu")).toBe(other);
++  });
++
++  it("recovers from corrupt or unavailable storage", () => {
++    localStorage.setItem("caars_chat_session:tuontipalvelu", "not-json");
++    expect(() => getSessionId(false, "tuontipalvelu")).not.toThrow();
++    const spy = vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
++      throw new Error("storage unavailable");
++    });
++    expect(() => touchSession("yhteys")).not.toThrow();
++    spy.mockRestore();
++  });
++});
+
+--- a/src/test/p0Durability.static.test.ts
++++ b/src/test/p0Durability.static.test.ts
+@@ -7,6 +7,7 @@
+ const webhook = read("supabase/functions/stripe-webhook/index.ts");
+ const fallbackChat = read("supabase/functions/chat/index.ts");
+ const primaryChat = read("supabase/functions/claude-chat/index.ts");
++const serviceContext = read("supabase/functions/_shared/serviceContext.ts");
+ const financingPage = read("src/pages/RahoitusJaVaihtoautoPage.tsx");
+ const contactPage = read("src/pages/Yhteystiedot.tsx");
+ 
+@@ -35,6 +36,19 @@
+     }
+   });
+ 
++  it("keeps mandatory boundaries outside the replaceable admin prompt", () => {
++    expect(primaryChat).toMatch(/settings\.system_prompt\?\.trim\(\) \|\| DEFAULT_SYSTEM_PROMPT}[\s\S]*SERVICE_SAFETY_CONTEXT/);
++    expect(fallbackChat).toMatch(/SALES_SYSTEM_PROMPT[\s\S]*SERVICE_SAFETY_CONTEXT/);
++  });
++
++  it("keeps Maksupalvelu separate from every import service in both chat paths", () => {
++    expect(serviceContext).toContain("Maksupalvelu on erillinen 149 € palvelu");
++    expect(serviceContext).toContain("Älä väitä maksun välityksen sisältyvän");
++    for (const source of [fallbackChat, primaryChat]) {
++      expect(source).toContain("SERVICE_SAFETY_CONTEXT");
++    }
++  });
++
+   it("mounts chat on financing and contact pages", () => {
+     expect(financingPage).toMatch(/<ChatBot\s*\/>/);
+     expect(contactPage).toMatch(/<ChatBot\s*\/>/);
+
+--- a/src/test/pricing.regression.test.ts
++++ b/src/test/pricing.regression.test.ts
+@@ -17,6 +17,8 @@
+     expect(pricing.services.maksupalvelu.price).toBe(149);
+     expect(pricing.services.avaimetKateenTuonti.swedenFromPrice).toBe(1290);
+     expect(pricing.services.avaimetKateenTuonti.germanyFromPrice).toBe(1990);
++    expect(pricing.services.avaimetKateenTuonti.description).toContain("Maksupalvelu 149 € on erillinen palvelu");
++    expect(pricing.services.avaimetKateenTuonti.description).not.toMatch(/neuvottelu, maksu,/i);
+   });
+ 
+   it("never mentions the deprecated 299 € startup fee in service descriptions", () => {
+
+--- a/src/test/serviceHandoff.test.ts
++++ b/src/test/serviceHandoff.test.ts
+@@ -19,6 +19,24 @@
+     expect(readHandoff("etsinta", { handoff: h })?.message).toBe("farmari");
+   });
+ 
++  it("uses router state when the sessionStorage getter itself is denied", () => {
++    const descriptor = Object.getOwnPropertyDescriptor(globalThis, "sessionStorage");
++    Object.defineProperty(globalThis, "sessionStorage", {
++      configurable: true,
++      get: () => { throw new Error("storage access denied"); },
++    });
++
++    try {
++      const handoff = saveHandoff("etsinta", { message: "farmari" });
++      expect(handoff.message).toBe("farmari");
++      expect(readHandoff("etsinta", { handoff })?.message).toBe("farmari");
++      expect(readHandoff("etsinta")).toBeNull();
++      expect(() => clearHandoff("etsinta")).not.toThrow();
++    } finally {
++      if (descriptor) Object.defineProperty(globalThis, "sessionStorage", descriptor);
++    }
++  });
++
+   it("isolates services (no cross-service leakage)", () => {
+     const h = saveHandoff("etsinta", { message: "salainen" });
+     expect(readHandoff("rahoitus")).toBeNull();
+
+--- a/supabase/functions/_shared/kbContent.ts
++++ b/supabase/functions/_shared/kbContent.ts
+@@ -143,8 +143,8 @@
+     key: "faq-kaytetty-auto-ruotsista",
+     source: "faq",
+     title: "FAQ: käytetty auto Ruotsista — miten se käytännössä ostetaan",
+-    content: `Käytetyn auton osto Ruotsista etenee näin: 1) asiakas löytää ilmoituksen itse tai Caars etsii autot Etsintäpalvelulla (alk. 79 €), 2) Perusselvitys (79 €) varmistaa taustat, kunnon ja myyjän, 3) hintaneuvottelu, 4) maksu turvallisesti (Maksupalvelu 149 € tai osana tuontia), 5) vakuutettu kuljetus Suomeen, 6) autoveroilmoitus, rekisteröinti ja katsastus, 7) luovutus sovitussa luovutuspisteessä.
+-Caars ei ole autoliike eikä korjaamo — hoidamme selvitykset, neuvottelut, maksun, logistiikan ja paperityöt asiakkaan puolesta.`,
++    content: `Käytetyn auton osto Ruotsista etenee näin: 1) asiakas löytää ilmoituksen itse tai Caars etsii kolme perusteltua ehdotusta Etsintäpalvelulla (79 €), 2) Perusselvitys (79 €) kokoaa yhden Ruotsissa myynnissä olevan auton taustat, myyjän tiedot ja kuvista näkyvän kunnon ilman fyysistä tarkastusta tai kuntotakuuta, 3) sovitaan mahdollisesta hintaneuvottelusta, 4) asiakas valitsee erillisen Maksupalvelun (149 €), jos Caars välittää maksun myyjälle, 5) sovitaan kuljetus Suomeen, 6) asiakas tekee autoveroilmoituksen, rekisteröinnin ja katsastuksen kirjallisten ohjeiden avulla.
++Caars ei ole autoliike eikä korjaamo. Maksupalvelu on erillinen palvelu eikä maksun välitys sisälly automaattisesti muihin palveluihin.`,
+   },
+   {
+     key: "faq-takuu-vastuut",
+@@ -157,8 +157,8 @@
+     key: "faq-kunto-ilman-tarkastusta",
+     source: "faq",
+     title: "FAQ: miten auton kunto varmistetaan ilman fyysistä tarkastusta tai koeajoa",
+-    content: `Caars ei tarjoa asiakkaalle mahdollisuutta itse käydä paikan päällä koeajamassa tai tarkastamassa autoa ennen ostoa — tuonti tapahtuu etänä. Riskiä hallitaan kolmella tavalla: (1) Perusselvitys (79 €) tarkistaa VIN:n, huoltohistorian, katsastukset, omistus- ja vauriotaustat sekä näkyvän kunnon myyjän tietojen ja kuvien perusteella; (2) suuri osa Ruotsista tuoduista autoista on liike- tai leasing-taustaisia, joilla on kunnossa oleva huoltokirja ja rekisteröity historia — tämä vähentää piilovikojen riskiä huomattavasti tavalliseen yksityiskauppaan verrattuna; (3) kun asiakas on löytänyt tietyn auton, Caarsin ruotsalainen kumppaniverkosto voi käydä tarkistamassa ruosteen ja yleiskunnon paikan päällä ennen ostoa osana Avaimet käteen -tuontia.
+-Jos asiakas toivoo nimenomaan fyysistä tarkastusta tai koeajoa, kerro rehellisesti, ettei se ole vakio-osa palveluita, mutta suosittele Perusselvitystä ensimmäisenä askeleena — se paljastaa suurimman osan riskeistä ilman paikan päällä käyntiä. Älä lupaa koeajoa tai taattua virheettömyyttä. Caars ei ole autoliike eikä tee virallista teknistä katsastustarkastusta.`,
++    content: `Perusselvitys (79 €) on etäselvitys yhdestä Ruotsissa myynnissä olevasta autosta. Se kokoaa VIN:n, huoltohistorian, katsastukset, omistus- ja vauriotaustat sekä kuvista ja myyjän tiedoista näkyvän kunnon. Caars ei käy tarkastamassa tai koeajamassa autoa eikä takaa sen teknistä kuntoa tai virheettömyyttä.
++Jos asiakas tarvitsee fyysisen tai teknisen tarkastuksen, kerro rehellisesti, ettei se sisälly Caarsin palveluihin. Perusselvitys auttaa tunnistamaan saatavilla oleviin tietoihin perustuvia riskejä, mutta se ei korvaa paikan päällä tehtävää tarkastusta.`,
+   },
+   {
+     key: "faq-rahoitus-vaihtoauto",
+
+--- a/supabase/functions/_shared/salesQualification.ts
++++ b/supabase/functions/_shared/salesQualification.ts
+@@ -16,9 +16,9 @@
+    huoltohistorian, lisäkuvat, käymme läpi taustat ja kunnon, annamme
+    kirjallisen suosituksen 1–3 arkipäivässä. Sisältää 3 autoa / 30 päivää.
+    Hyvitetään täysimääräisesti jos asiakas etenee tuontiin.
+-3. AVAIMET KÄTEEN -TUONTI alk. 1 290 € — Neuvottelu, maksu, kuljetus,
+-   verot, rekisteröinti — vakuutettu rahti Suomeen sovittuun luovutuspisteeseen. Aloitusmaksu 299 € käynnistää
+-   prosessin VASTA kun asiakas on päättänyt tuoda (ei mainita aiemmin).
++3. AVAIMET KÄTEEN -TUONTI alk. 1 290 € — Hankinta, neuvottelu, vakuutettu kuljetus,
++   dokumentit ja kirjalliset viranomaisohjeet sovitun tarjouksen mukaan. Maksupalvelu 149 € on
++   erillinen palvelu eikä sisälly tuontiin.
+ 
+ # 🎙️ SÄVY (Nordic, ei amerikkalainen myyjä)
+ - Suora, lyhyt, käytännöllinen, rauhallinen
+
+--- a/supabase/functions/_shared/serviceContext.ts
++++ b/supabase/functions/_shared/serviceContext.ts
+@@ -6,7 +6,7 @@
+   tuontiapu:
+     "Käyttäjä on TuontiApu-sivulla (250 €: kirjalliset ohjeet ja henkilökohtainen tuki itse tuovalle; ei myyjän kontaktointia eikä viranomaisasiointia asiakkaan puolesta).",
+   tuontipalvelu:
+-    "Käyttäjä on Tuontipalvelu-sivulla (Ruotsi alk. 1 290 €, Saksa alk. 1 990 €; hinta sovitaan tarjouksella laajuuden ja sijainnin mukaan; suorassa tuonnissa ei oteta vaihtoautoa).",
++    "Käyttäjä on Tuontipalvelu-sivulla (Ruotsi alk. 1 290 €, Saksa alk. 1 990 €; hankinnan, kuljetuksen ja dokumenttien laajuus sekä hinta sovitaan tarjouksella sijainnin mukaan; Maksupalvelu 149 € on erillinen eikä sisälly tuontiin; suorassa tuonnissa ei oteta vaihtoautoa).",
+   yhteys:
+     "Käyttäjä on yhteystietosivulla. Auta valitsemaan oikea palvelu ja ohjaa tarvittaessa puhelimeen, WhatsAppiin tai lomakkeeseen.",
+   rahoitus:
+@@ -16,9 +16,15 @@
+ export const SERVICE_SAFETY_CONTEXT = `
+ # PALVELUJEN EHDOTTOMAT RAJAT
+ - Perusselvitys koskee tasan yhtä Ruotsissa myynnissä olevaa autoa. Se on etäselvitys kuvien, asiakirjojen ja myyjän tietojen pohjalta, ei fyysinen tai tekninen tarkastus.
++- Perusselvitys ei takaa auton teknistä kuntoa tai virheettömyyttä. Kuvaa vain saatavilla olevat tiedot ja kuvista näkyvä kunto.
++- Etsintäpalvelu 79 € sisältää kolme perusteltua autoehdotusta eikä Perusselvitystä. Etsintäpalvelu + 99 € sisältää Perusselvityksen yhdestä valitusta Ruotsin autosta. Haku alkaa vasta maksusta.
++- TuontiApu maksaa 250 €. Tuontipalvelu alkaa Ruotsista 1 290 eurosta ja Saksasta 1 990 eurosta; lopullinen hinta sovitaan tarjouksella laajuuden ja sijainnin mukaan.
+ - Rahoitus ja vaihtoauto ovat mahdollisia vain Autohallin kautta tehtävässä autokaupassa. Rahoitus edellyttää rahoittajan luottopäätöstä; hyväksyntää ei saa luvata. Suorassa tuonnissa Caars ei ota vaihtoautoa.
+ - Älä lupaa arvonlisäveron palautusta, muuta veroetua tai autoveron euromäärää.
+ - Älä väitä, että Caars rekisteröi, katsastaa tai tekee autoveroilmoituksen asiakkaan puolesta.
++- Maksupalvelu on erillinen 149 € palvelu. Älä väitä maksun välityksen sisältyvän Perusselvitykseen, Etsintäpalveluun, TuontiApuun tai Tuontipalveluun.
++- Älä väitä, että Caars hoitaa fyysisen tarkastuksen, koeajon tai auton teknisen kunnon varmistamisen.
++- Jos käyttäjä kysyy rahoituksesta tai vaihtoautosta, älä ohjaa Perusselvitykseen edes silloin, kun viestissä on auton linkki.
+ `;
+ 
+ export function validatedServiceContext(value: unknown): string | null {

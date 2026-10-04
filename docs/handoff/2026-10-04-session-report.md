@@ -77,3 +77,6 @@ Status at creation: implementation running; no completed fixes, tests, deploymen
 - Browser: all six card forms independently carried synthetic text/link/topic to the correct clean service URL. Perusselvitys draft also survived reload. Actual card CTA colors were sampled: white on teal 5.42:1, orange 4.50:1, green 6.04:1.
 - The static preview was displaying an old edit; Lovable's Back to latest restored the newest preview. Check this before diagnosing stale screenshots. A further queued refinement requests an unobscured split photo and narrower legacy CSS overrides.
 - Frontend remains unpublished. Payment/chat correctness follow-up and final design verification are still running.
+
+## Final premium UI checkpoint
+Website e0ebe189: role-based CTA system, split BMW masthead, six refined cards, semantic Tesla table and confirmed separate149EUR Maksupalvelu. Independent153/153tests, TypeScript and production build134routes96sitemap passed. Platform Git UI rechecked in-sync; frontend preview-only. Complete evidence and archived diff ranges are in2026-10-04-ui-ux-update.md. Historical14open fulfillment cases and realKlarna test remain open; no purchase/resend performed.

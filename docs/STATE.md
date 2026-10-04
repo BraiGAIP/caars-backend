@@ -1,61 +1,26 @@
-# Caars project state
+# Caars current state — 2026-10-04
 
-Updated 2026-10-04. Start with ARCHITECTURE.md to distinguish this assistant backend from the Lovable website.
+## Repository boundary
+This is BraiGAIP/caars-backend, the Python/MongoDB assistant backend. The website is venturecore/caars-bright-spark main, edited through Lovable project 7e00d027-e019-4070-a93a-d6789b55bd24. Website source is also reviewed locally at /Users/he68/Development/caars-bright-spark (snapshot, not Git checkout).
 
-## Verified complete
+## Complete
+- Reviewed and deployed paid-order/deposit persistence, task uniqueness, fenced retry leases and idempotent CRM payment activities. Required confirmation failures remain retryable.
+- Six service cards, private service-specific draft handoff, summaries/FAQ, metadata/canonical/prerender records and finance/contact bots.
+- Shared mandatory bot boundaries, service-isolated conversation IDs, Autohalli financing/trade-in routing, storage-denied fallback and accessible cookie choices.
+- Premium split BMW masthead, trust badges, role-based orange purchase/petrol secondary/neutral partner cards, 16px fields, 48px targets, focus/reduced-motion handling and semantic Tesla table.
+- User-confirmed separate 149 EUR Maksupalvelu reflected in public descriptions, example and both bot boundaries. Checkout amounts and historical orders preserved.
 
-- Backend GitHub baseline and repository contents inspected read-only.
-- Website payment/UI/conversion audits completed by three parallel agency-agents role teams.
-- Initial handoff recorded; website implementation dispatched through existing Lovable project using existing credits only.
-- No credits purchased; no production payments/refunds initiated.
+## Open
+- P0: no remaining critical defect found in the reviewed requested payment paths; real provider delivery is not an exactly-once guarantee.
+- P1: inspect 14 historical open orders individually (4 handled; 18 paid sessions match 18 stored orders). Do not resend/backfill without fulfillment evidence.
+- P1: real delayed Klarna/provider-failure end-to-end test remains unperformed; historical 17 failure logs unavailable.
+- P1: review premium frontend preview before publication. These frontend changes have not been published to caars.fi.
+- P2: broader full-site visual regression and prior Cloudflare token/worker follow-ups noted in website state.
 
-## P0 — open until verified
+## Verification and delivery
+Independent final website checkpoint e0ebe189: 153/153 tests, TypeScript and production build passed (134 prerender routes, 96 sitemap URLs). Node26 required --no-experimental-webstorage for jsdom storage tests; optional audit-PDF regeneration warns because xhtml2pdf is absent but build exits0. Browser verified six populated service journeys, clean URLs, reload preservation, 320/390/768/1440 layouts without horizontal overflow, 16px fields/48px CTA and reduced motion. Native 200% browser zoom was not verified.
 
-- Website webhook must return 5xx on durable persistence failure instead of swallowing errors with 200.
-- Exactly one atomic fulfillment task per paid order, including new customers and two orders by the same buyer.
-- Gate duplicate delivery side effects; recover missed notifications safely.
-- Signed webhook updates paid deposits even when browser is closed; pending/failed UI makes no success promise.
-- Identify actual Caars live Stripe account and endpoint, investigate 17 failures, reconcile paginated paid sessions/orders/tasks.
-- Verify website commit synchronization to `venturecore/caars-bright-spark` main through Lovable; local BraiGAIP account cannot access that private repository.
+Lovable Git UI reports venturecore/caars-bright-spark main connected/in sync; private remote SHA cannot be independently read by local BraiGAIP gh. Companion docs/diffs are committed and pushed separately. Final card-spacing and explicit mobile table-role fixes are complete and revalidated; website source e0ebe189. See the UI handoff for diffs and screenshots.
 
-### First implementation phase — website SHA 0b134658
-
-Website source commit `0b134658a13a11e9ee40603eebc35ff02f31f7a7` now contains the first payment patch; its diff is preserved in `docs/handoff/2026-10-04-p0-website.diff`. Project-agent trace records live webhook deployment, rolled-back DB checks (new buyer/two orders/repeat/unique session), invalid-signature checks, and 18 paid Caars Checkout Sessions matching 18 stored orders with pagination exhausted. The previous connector-account limitation was resolved through Lovable's project-connected Caars account. Historical 17 delivery failures remain unexplained because old logs are unavailable.
-
-Independent review confirms atomic order/task insertion and restricted RPC grants. Remaining required fixes were dispatched: swallowed Resend errors, unchecked finalization updates, missing claim owner token, concurrent new-contact resolution, deposit handling and neutral pending UI. Do not mark P0 fully complete yet. Historic notification delivery remains UNKNOWN; marking old rows done is a no-resend precaution, not proof of delivery. Historic task dry-run requested; no blanket historical backfill authorized without status evidence.
-
-## P1 — requested implementation running, not yet validated
-
-- Six service cards: Perusselvitys 79 EUR, Etsintä 79 EUR, TuontiApu 250 EUR, Tuontipalvelu SE from1290/DE from1990, contact, financing/trade-in.
-- Service-isolated expiring session intake; no customer content in URL parameters or analytics.
-- Light public theme with >=4.5:1 normal-text contrast.
-- Both chat backends validate service context; financing/trade-in conditionally routes to Autohalli.
-- Visible service summaries/FAQ, metadata, canonical/sitemap/prerender records.
-- Build/unit and targeted browser checks, reviewed diff and final handoff.
-
-## P2 — continuation
-
-- Ongoing modular commits and refreshed state after every significant phase.
-- Payment side-effect outbox/retry observability if not delivered in P0.
-- Broader public-page accessibility/contrast checks beyond main service journey.
-
-## Current handoff
-
-### Latest user steering — premium UI/UX
-
-New premium homepage work is authorized and running: one orange purchase theme, secondary search/contact, distinct Autohalli partner card, refined six-card bento layout/inputs, trust badges, restrained motion and semantic calculator/Tesla table. Read `docs/handoff/2026-10-04-ui-ux-update.md` for actual Agency roles, design decisions and pending verification. Preserve the independently reviewed P0 fixes at website SHA 2589a0af.
-
-### Website review checkpoint: SHA 6411c5f, 2026-10-04
-
-- Six cards, service-local session handoff, summaries/FAQ/SEO and new financing route implemented in unpublished preview. Independent local build passed (134 prerender routes, 96 sitemap URLs); 140/140 tests passed across 16 files. Optional audit-PDF regeneration failed because xhtml2pdf is absent; the build continued successfully.
-- Main order owner-token fencing, checked finalization, required confirmation errors and per-effect progress verified in source. Additive migrations and webhook are deployed through Lovable. Real delayed-payment end-to-end remains untested.
-- Historical classification: 18 paid persisted orders without order-linked tasks; four marked handled, 14 open (12 missing product classification, one Perusselvitys, one Tuonti). No old tasks or customer emails automatically added. Administrative review remains necessary before safe recovery.
-- Independent review found remaining deposit busy-claim acknowledgement/ownership/timeout issues, missing service context in fallback chat, absent bot widgets on contact/financing routes, admin-prompt boundary replacement, stale financing CTA route and shared chat session IDs. Corrections dispatched; P0/P1 are not yet declared fully complete.
-- User rejected washed-out preview. Restore Caars turquoise/orange, car imagery and section hierarchy while retaining the light accessible base and six functional cards. Design correction is active; preview is not published.
-- Diff archive: `docs/handoff/2026-10-04-service-and-payment-website.diff` compares 0b134658 to 6411c5f. This is an intermediate reviewed patch, not the final design.
-
-Baseline website SHA `13b0120d6c81535a9bfa7f3b2aad200a287bffe4`; phase-one request `umsg_01m41trz9jf9da5swrtzbtn7ng` produced website SHA `0b134658a13a11e9ee40603eebc35ff02f31f7a7`. Continuation request `umsg_01m41v2ax8f3ht49rt7m3b4fph` is running, with corrective P0 review request `umsg_01m41v4kz8e2ravzymdbnyk0xx` queued on thread `main`. Phase-one backend deployment and checks are recorded above; frontend publication and final website GitHub SHA synchronization are not yet verified.
-
-Independent local snapshot check: production build passed; unit suite has 118 passed and five obsolete Hero CTA-class tests failed. New card behavior and browser checks remain required. Local npm lock was regenerated for this check because the downloaded lock did not match phase-one package.json; this does not imply the remote lock was repaired.
-
-Lovable UI verified connected/in-sync website repository `venturecore/caars-bright-spark` main. UI showed 602 existing credits; no purchase needed. Initial companion documentation pushed to this backend repository as `1a105819691b7c663b2f6b20ce08ba2967f44d56`, remote SHA verified.
+## Continue
+Read ARCHITECTURE.md and docs/handoff/2026-10-04-ui-ux-update.md. Make modular source commits in the website repository; keep this companion report distinct. No credits were purchased, no real payment/refund or historical resend was performed.

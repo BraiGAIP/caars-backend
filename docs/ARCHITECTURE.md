@@ -29,13 +29,15 @@ Editor: https://lovable.dev/projects/7e00d027-e019-4070-a93a-d6789b55bd24
 
 Verified website baseline: `13b0120d6c81535a9bfa7f3b2aad200a287bffe4`. React 18/Vite/TypeScript, Tailwind/shadcn, React Router; Lovable Cloud/Supabase PostgreSQL and Deno functions. Supabase reference `cpmiqrrukdntypgflrdq`. Lovable Git settings identify `https://github.com/venturecore/caars-bright-spark.git`, branch `main`, as connected and in sync at inspection. The local BraiGAIP GitHub account cannot read/clone this private repository (repository not found); Lovable remains the authorized website edit/sync surface. Do not imply this backend repository is automatically synchronized with the website.
 
-### Website payment architecture under repair
+### Reviewed website architecture
 
-`create-checkout` / `create-deposit-checkout` create server-priced Stripe sessions. Signed `stripe-webhook` is the paid-status authority. `orders.stripe_session_id` is unique. CRM and `control_center_tasks` provide fulfillment; deposits use `commitment_deposits`. Existing task trigger can miss new buyers and merge separate orders. Intended invariant: durable paid order and exactly one order-linked task atomically, retryable failures and recoverable side effects. Document implemented migration/RPC details only after reviewing the actual website diff.
+The website uses server-priced Checkout, signature-verified webhook events, unique Stripe session/order-task keys and atomic paid-order/CRM persistence. Main-order and deposit confirmations use separate owner-token-fenced retry leases. Required confirmation failures return retryable errors; provider idempotency reduces duplicate sends but does not prove exactly-once external delivery.
 
-Codex's exposed BRAI Stripe account has webhook destinations for other projects and was left untouched. Lovable's project-connected tools verified the Caars Autotuontiliike live account and enabled Caars checkout webhook. All 18 paid Checkout Sessions match 18 stored orders; pagination was exhausted. Historical logs for the reported 17 failed deliveries were unavailable, so their original cause remains unverified.
+Six canonical service routes use sanitized router state with isolated 30-minute sessionStorage recovery. Customer drafts never enter URL queries/fragments and are not sent automatically. Both chatbot endpoints validate service context and append mandatory safety rules after custom prompts; chat conversation IDs are service-scoped. Maksupalvelu is a separate 149 EUR service, excluded from Tuontipalvelu and the Tesla illustrative total.
 
-Website phase-one commit `0b134658a13a11e9ee40603eebc35ff02f31f7a7` adds a unique `control_center_tasks.order_id` and an atomic paid-order trigger, plus a side-effect claim. Independent review found notification and claim-ownership gaps; further repairs are queued. The archived phase-one diff is evidence of an intermediate implementation, not proof that the entire P0 is complete.
+Full reviewed schema/RPC/routing/design description is preserved in `docs/handoff/2026-10-04-website-architecture.md`. The website's own `docs/ARCHITECTURE.md` remains the implementation authority.
+
+Lovable verified the actual Caars live Stripe account and exhausted pagination: 18 paid sessions match 18 stored orders. Historical 17 failed-delivery logs are unavailable; original cause and historic notification delivery remain unknown. Four historical orders are handled, 14 remain open for individual fulfillment review. No blanket backfill or resend was performed.
 
 ## Handoff protocol
 

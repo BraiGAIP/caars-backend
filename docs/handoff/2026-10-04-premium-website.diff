@@ -1,0 +1,952 @@
+--- a/.lovable/plan.md
++++ b/.lovable/plan.md
+@@ -1,23 +1,12 @@
+-# Premium-etusivun viimeistely
+-
+-## Toteutus
+-- Päivitä etusivun kuusi palvelukorttia yhtenäiseen bento-rakenteeseen säilyttäen nykyinen 1/2/3-palstainen järjestys, reitit, hinnat, lomakkeet ja yksityinen tiedonsiirto.
+-- Yhtenäistä toimintoroolit: Caarsin ostettavat palvelut oranssiksi, etsintä ja yhteydenotto petroolireunaisiksi sekä Autohalli-kumppanipalvelu omaksi neutraaliksi kortikseen.
+-- Säilytä nykyinen erillinen teksti–BMW-kuva-masthead ja tee luottamusluvuista kolme selkeää kuvakemerkkiä ilman uusia väitteitä.
+-- Muuta kustannusesimerkki semanttiseksi, responsiiviseksi taulukoksi. Säilytä kaikki nykyiset summat, lähdetekstit ja vastuuvapautukset muuttamatta laskentalogiikkaa.
+-- Rajaa uudet väri-, liike- ja fokusratkaisut vain etusivun palvelu- ja kustannusosioihin, jotta hallinta- ja maksunäkymät eivät muutu.
+-
+-## Tekninen toteutus
+-- Lisää semanttiset etusivutunnisteet nykyiseen vaaleaan teemaan ja tyylikartta palvelukorteille.
+-- Käytä 48 px kosketuskohteita, vähintään 16 px lomaketekstiä mobiilissa, näkyviä fokusrenkaita ja `prefers-reduced-motion`-poikkeusta.
+-- Lisää käyttäytymiseen perustuva DOM-testi kustannustaulukon caption-, row header-, total/footer- ja linkkihierarkialle; nykyiset 15 kortti- ja handoff-testiä säilyvät.
+-
+-## Varmennus ja dokumentointi
+-- Aja puhdas `npm ci`, kaikki testit, TypeScript-tarkistus ja tuotantokäännös.
+-- Tarkista selaimella 320, 390, 768 ja 1440 px sekä 200 % zoom: kuusi korttia, puhtaat URLit, handoff, refresh/back, ei automaattista lähetystä, fokus, kontrasti, lomakefontit ja vähennetty liike.
+-- Ota ja tarkista lopulliset kuvat mastheadista, korteista ja kustannustaulukosta.
+-- Lisää `docs/handoff/2026-10-04-ui-ux-update.md` ja päivitä nykytila, arkkitehtuurin design-osio sekä roadmap todellisilla tuloksilla ja rajoitteilla.
+-- Frontendia ei julkaista. Maksuja, Max-tilaa tai uusia kuvia ei käytetä.
+-
+-## Oletus
+-- Pyydettyjen ulkoisten agenttiroolien tiedostot eivät ole tämän työtilan aktiivisissa taidoissa. Toteutus noudattaa käyttäjän koottua spesifikaatiota; lähteenä ei väitetä lukemattomia roolitiedostoja.
++# Final premium review fixes
++
++## Changes
++- Reduce desktop service-card reserved bands to 64 px heading, 48 px price, 72 px description, and 120 px field while preserving aligned controls and actions.
++- Add explicit accessibility roles to the existing native cost table, row groups, rows, row headers, and cells for the narrow stacked presentation.
++- Extend DOM tests to verify the explicit semantic hierarchy.
++- Correct the handoff provenance and test evidence, including the Node 26 web-storage condition and the distinction between reflow testing and true 200% zoom.
++
++## Verification
++- Run all tests with native Node web storage disabled, TypeScript validation, and the production build.
++- Check the current preview build result and record only verified source/sync facts.
++- Do not publish, purchase credits, use Max mode, or alter payments, private handoff, pricing, routes, or chat safeguards.
+
+--- /dev/null
++++ b/.lovable/plan/premium-etusivun-viimeistely-2026-10-04.md
+@@ -0,0 +1,23 @@
++# Premium-etusivun viimeistely
++
++## Toteutus
++- Päivitä etusivun kuusi palvelukorttia yhtenäiseen bento-rakenteeseen säilyttäen nykyinen 1/2/3-palstainen järjestys, reitit, hinnat, lomakkeet ja yksityinen tiedonsiirto.
++- Yhtenäistä toimintoroolit: Caarsin ostettavat palvelut oranssiksi, etsintä ja yhteydenotto petroolireunaisiksi sekä Autohalli-kumppanipalvelu omaksi neutraaliksi kortikseen.
++- Säilytä nykyinen erillinen teksti–BMW-kuva-masthead ja tee luottamusluvuista kolme selkeää kuvakemerkkiä ilman uusia väitteitä.
++- Muuta kustannusesimerkki semanttiseksi, responsiiviseksi taulukoksi. Säilytä kaikki nykyiset summat, lähdetekstit ja vastuuvapautukset muuttamatta laskentalogiikkaa.
++- Rajaa uudet väri-, liike- ja fokusratkaisut vain etusivun palvelu- ja kustannusosioihin, jotta hallinta- ja maksunäkymät eivät muutu.
++
++## Tekninen toteutus
++- Lisää semanttiset etusivutunnisteet nykyiseen vaaleaan teemaan ja tyylikartta palvelukorteille.
++- Käytä 48 px kosketuskohteita, vähintään 16 px lomaketekstiä mobiilissa, näkyviä fokusrenkaita ja `prefers-reduced-motion`-poikkeusta.
++- Lisää käyttäytymiseen perustuva DOM-testi kustannustaulukon caption-, row header-, total/footer- ja linkkihierarkialle; nykyiset 15 kortti- ja handoff-testiä säilyvät.
++
++## Varmennus ja dokumentointi
++- Aja puhdas `npm ci`, kaikki testit, TypeScript-tarkistus ja tuotantokäännös.
++- Tarkista selaimella 320, 390, 768 ja 1440 px sekä 200 % zoom: kuusi korttia, puhtaat URLit, handoff, refresh/back, ei automaattista lähetystä, fokus, kontrasti, lomakefontit ja vähennetty liike.
++- Ota ja tarkista lopulliset kuvat mastheadista, korteista ja kustannustaulukosta.
++- Lisää `docs/handoff/2026-10-04-ui-ux-update.md` ja päivitä nykytila, arkkitehtuurin design-osio sekä roadmap todellisilla tuloksilla ja rajoitteilla.
++- Frontendia ei julkaista. Maksuja, Max-tilaa tai uusia kuvia ei käytetä.
++
++## Oletus
++- Pyydettyjen ulkoisten agenttiroolien tiedostot eivät ole tämän työtilan aktiivisissa taidoissa. Toteutus noudattaa käyttäjän koottua spesifikaatiota; lähteenä ei väitetä lukemattomia roolitiedostoja.
+
+--- a/AGENTS.md
++++ b/AGENTS.md
+@@ -2,3 +2,4 @@
+ - Deposit confirmation uses a separate owner-token-fenced lease shared by webhook and browser verification; a busy or missing expected deposit is retryable and only the token owner may finalize or reset it.
+ - Web-chat conversation IDs are scoped by validated service while the anonymous visitor ID remains shared for analytics, preventing cross-service thread and contact-suppression leakage.
+ - Mandatory service safety boundaries are appended after any admin-replaceable AI prompt in both chat endpoints, so custom wording cannot remove product and safety limits.
++- Homepage service styling is role-based (`purchase`, `secondary`, `partner`) and scoped under homepage classes, so visual changes cannot restyle admin or payment flows.
+
+--- a/docs/ARCHITECTURE.md
++++ b/docs/ARCHITECTURE.md
+@@ -10,6 +10,14 @@
+ - Homepage card data is sanitized and passed first in React Router state, with service-specific `sessionStorage` recovery for 30 minutes. Storage access is obtained inside guarded code, so a denied storage getter cannot prevent router-state navigation.
+ - User messages, topics and car links are never put in query strings/fragments or analytics. Each service key is isolated; headings navigate without input and no draft is auto-sent.
+ 
++## Public homepage design architecture
++- The six-card DOM order follows the shared `SERVICES` configuration and the existing 1/2/3-column breakpoints. Cards are forms only for their own optional draft field; the card itself is not a click target.
++- `CARD_STYLES` assigns one semantic visual role per service: `purchase`, `secondary` or `partner`. Styling is scoped under `.home-premium` and `.home-cost-module`, preventing homepage color/motion rules from changing admin or payment views.
++- Purchase services share one accessible orange CTA. Etsintä/contact use a petrol outline. Finance is a non-SKU partner card with an Autohalli text badge and an internal route CTA; no unverified partner logo or external glyph is used.
++- The masthead keeps text and the existing BMW photo in separate 55/45 desktop columns and stacks the photo after text on mobile. Trust statements use existing verified claims only.
++- The cost example is an HTML table with a caption, `th scope="row"`, tabular right-aligned values and a `tfoot` total. At narrow reflow widths each row stacks without changing source order or amounts.
++- Inputs and actions have 48 px minimum targets, 16 px service-field text, persistent labels and visible focus rings. Hover motion is pointer-gated; `prefers-reduced-motion` removes scoped transitions/transforms.
++
+ ## Chat architecture
+ - `claude-chat` is the primary endpoint and `chat` is the fallback. Both validate the same six service IDs and append the shared mandatory safety context after any admin-replaceable prompt.
+ - Limits cover exact service scope/prices, one Swedish-car remote Perusselvitys based on seller information/photos, no physical inspection or condition guarantee, separate payments, no euro car-tax estimate and restricted financing/trade-in claims.
+@@ -18,6 +26,7 @@
+ ## Checkout and payment verification
+ - Stripe API version: `2025-08-27.basil`.
+ - `create-checkout` owns the price catalogue; client amounts are not trusted. Products: 79 € Perusselvitys, 79 € Etsintäpalvelu, 99 € Etsintäpalvelu +, 250 € TuontiApu and Sweden full import from 1 290 €. Germany from 1 990 € is quote-only.
++- Maksupalvelu is a separate 149 € service and is not included in Tuontipalvelu. Public pricing, the knowledge base and both chats preserve this boundary; the Tesla example excludes it from its displayed total.
+ - `verify-checkout-session` lets the success page trust only a server-verified paid session. A valid delayed payment can be pending; cancelled/expired/failed/unknown sessions do not receive paid success content or Purchase events.
+ 
+ ## Paid-order webhook and schema
+
+--- a/docs/STATE.md
++++ b/docs/STATE.md
+@@ -1,11 +1,15 @@
+ # Caars.fi — CURRENT (verified 2026-10-04)
+ 
+ ## Verified done
+-- Public homepage has an accessible light Caars design, a separate 55/45 text-and-BMW-photo masthead on desktop, a stacked masthead on mobile, six service cards, branded section surfaces and one mobile floating chat action. The heading never overlays the photograph.
++- Public homepage has a premium cool-neutral light Caars design, a separate 55/45 text-and-BMW-photo masthead on desktop, a stacked masthead on mobile, three icon-based trust statements, six role-based service cards, branded section surfaces and one mobile floating chat action. The heading never overlays the photograph.
++- Desktop service cards use compact aligned content bands (64 px heading, 48 px price, 72 px description and 120 px field) rather than reserving excessive blank description space; inputs and CTAs remain aligned.
++- Homepage CTA roles are explicit: Perusselvitys/TuontiApu/Tuontipalvelu use the same accessible orange purchase CTA; Etsintä/contact use petrol outlines; finance uses a muted `Kumppanipalvelu · Autohalli` surface and neutral internal CTA. Green remains for trust/WhatsApp, not purchase.
++- The Tesla cost example is a semantic responsive table with the existing vehicle/import/tax/registration values and approximate total, row headers and a distinct total footer. Native table elements retain explicit table/rowgroup/row/rowheader/cell roles when the narrow layout changes their CSS display. It explicitly excludes the separate optional 149 € Maksupalvelu from that total.
+ - The six cards link to `/perusselvitys`, `/auton-etsinta`, `/tuontiapu`, `/tuontipalvelu`, `/yhteystiedot` and `/rahoitus-ja-vaihtoauto`. Optional message/link/topic data moves through router state plus service-isolated 30-minute session storage, never through URL parameters, fragments or analytics. Router-state transfer still works when browser storage access itself is denied.
+ - Public service pages have visible summaries, matching FAQ/JSON-LD, unique metadata, canonical URLs, sitemap/prerender coverage and service-specific chat. Draft text is shown but never sent automatically.
+ - Both AI endpoints validate the same six service contexts and append mandatory service/safety limits after any admin-editable prompt. Conversation IDs are service-scoped; the anonymous analytics identity remains shared.
+ - Checkout prices are server-authoritative: Perusselvitys 79 €, Etsintäpalvelu 79 €, Etsintäpalvelu + 99 €, TuontiApu 250 € and Sweden full import from 1 290 €. Germany is an agreed quote from 1 990 €; there is no instant Germany checkout SKU.
++- DECISION: Maksupalvelu is a separate 149 € service, not part of Tuontipalvelu. Public descriptions, the knowledge base and both mandatory chat boundaries state this consistently; checkout amounts, routes and historical paid orders are unchanged.
+ - Paid-order processing uses raw-body Stripe signature verification, durable order persistence, one unique fulfillment task per order, owner-token-fenced per-effect processing and database-idempotent CRM payment activity. Required persistence/email failures return retryable 5xx; optional CAPI/push is bounded and best-effort.
+ - Delayed payments are supported: unpaid completed Checkout creates no paid fulfillment; `checkout.session.async_payment_succeeded` can fulfill idempotently; failure creates no paid task. PaymentSuccess shows a neutral pending state and emits Purchase only after server verification.
+ - The 299 € deposit uses a separate owner-token-fenced lease shared by signed webhook and browser verification. Busy/missing expected deposits are retryable, only the current owner can finalize/reset, and email calls have an eight-second bound.
+@@ -20,19 +24,18 @@
+ - **P0:** none known from the authorized renewal and review queue.
+ - **P1:** review the 14 historical paid/open orders against fulfillment evidence, then apply reconciliation only to genuinely pending rows.
+ - **P1:** run a real Klarna/delayed-payment end-to-end test when a safe test transaction is available.
+-- **P1:** publish the frontend only after Hans approves the reviewed preview.
++- **P1:** review the premium homepage preview/diff, then publish the frontend only after Hans explicitly approves it.
+ - **P2:** rotate the Cloudflare token previously pasted in chat; reconcile repository Worker code with the verified live Worker before the next Worker deployment.
+ 
+ ## Tests and evidence
+-- Clean locked install: `npm ci` passed. Final complete Vitest run: 18/18 files and 150/150 tests passed, including the throwing `sessionStorage` getter with successful router-state fallback.
+-- TypeScript check passed. The final preview build log reports `build OK`; the preceding full production build passed with 134 routes prerendered.
+-- Final browser refresh: 320×900 and 1280×1800 rendered six cards and the BMW image with zero horizontal overflow, no page errors and no text/photo overlap. Cookie accept/save CTA contrast is 4.99:1 and necessary-only is 13.67:1; the necessary-only choice remained visible. Screenshots were inspected.
++- Independent Codex local validation at website commit `aa6dec89`: with Node 26, `NODE_OPTIONS=--no-experimental-webstorage` produced 19/19 files and 153/153 passing tests. Node 26 native `localStorage` otherwise caused four test-harness failures in jsdom; disabling that experimental Node feature restores the intended browser-like harness. TypeScript passed, and the production build completed with 134 prerendered routes and a 96-URL sitemap (exit 0). Optional PDF regeneration reported missing `xhtml2pdf`; it did not fail the site build.
++- Browser: 320/390/768/1440 CSS px rendered exactly six cards, the BMW image and semantic table with no horizontal overflow or page errors. Inputs are 16 px; CTAs are 48 px. Computed CTA contrast is 5.05:1 purchase, 4.99:1 petrol and 14.67:1 partner. Keyboard focus and reduced-motion behavior passed. The 384 px device-scale-2 run verified narrow reflow only; true browser 200% zoom was not verified.
+ - Backend checks: unsigned/invalid Stripe webhook requests returned 400; deposit lease and order lease stale-owner/rollback tests passed. No real customer payment/refund, historical resend or live Klarna transaction was initiated.
+ 
+ ## Deployment and source sync
+-- Live backend functions include the payment/deposit correctness fixes and both service-aware chat endpoints.
++- Live backend functions include the payment/deposit correctness fixes and both service-aware chat endpoints; both chat functions were redeployed after the separate Maksupalvelu boundary was confirmed.
+ - Frontend changes remain preview-only and were not published in this work.
+-- Hans verified the website project is connected in Lovable Settings → Git to `venturecore/caars-bright-spark`, branch `main`, shown “In sync with GitHub”. The sandbox does not expose that platform remote, so it cannot independently provide a website push SHA.
++- Website project: `venturecore/caars-bright-spark`, branch `main`, connected through the platform. The independent Codex validation source was local commit `aa6dec89`. No GitHub push for the final two fixes is claimed without remote proof.
+ - Companion documentation in the separate `BraiGAIP/caars-backend` repository was reported pushed at `ccf947c`; it was not used as the website implementation repository.
+ 
+-See `docs/ARCHITECTURE.md` for the current system and `docs/handoff/2026-10-04-session-report.md` for chronology and limitations.
++See `docs/ARCHITECTURE.md`, `docs/handoff/2026-10-04-session-report.md` and `docs/handoff/2026-10-04-ui-ux-update.md`.
+
+--- /dev/null
++++ b/docs/handoff/2026-10-04-ui-ux-update.md
+@@ -0,0 +1,64 @@
++# Premium UI/UX update — 2026-10-04
++
++## Scope and source
++- Implemented against the latest website source after the payment, deposit, chat-safety, private-handoff and SEO fixes.
++- Three external Codex role teams read the agency role files and supplied the consolidated specification. The exact CRO role file was absent, so Codex used the closest `marketing-growth-hacker` role. This provenance came from the external Codex review; Hans did not personally report reading those files.
++- The user clarified that Maksupalvelu is a separate 149 € service, never included in Tuontipalvelu. Public descriptions, the knowledge base and both chat boundaries were aligned without changing checkout amounts, service routes or historical orders.
++
++## Initial → final
++- Initial: six functional cards used arbitrary teal/orange/green service colors, 44 px controls, a generic card hierarchy and a list-like cost example.
++- Final: the existing split BMW masthead remains; the service area uses a cool-neutral/soft-teal canvas, 22 px cards, 24 px padding and role-based CTA hierarchy. Purchase services share one accessible orange CTA; Etsintä/contact use petrol outlines; finance has a muted partner surface, a visible `Kumppanipalvelu · Autohalli` badge and a neutral internal CTA.
++- Trust statements remain exactly: `Yli 900 tuotua autoa`, `4,9 / 5 asiakkaiden arvio`, `Palvelu koko Suomeen`. No metric or partner logo was added.
++- The Tesla example is now a semantic table with a caption, row headers, right-aligned tabular amounts and a teal total footer. The existing vehicle/import/tax/registration values and approximate total remain; a separate note says the optional 149 € Maksupalvelu is not included in that total.
++- Final review reduced desktop card bands from 76/52/114/146 px to 64/48/72/120 px for heading/price/description/field. This removes excess blank space while preserving shared CTA and control alignment and all copy.
++- Because the ≤480 px table presentation changes native table elements to block layout, explicit `table`, `rowgroup`, `row`, `rowheader` and `cell` roles now preserve the intended accessibility hierarchy alongside the native elements and caption.
++
++## Design system decisions
++- Homepage-scoped semantic values: canvas `195 23% 97%`, white surface, partner surface `195 20% 94%`, border `194 20% 88%`, petrol `177 88% 26%`, purchase orange `24 90% 38%`.
++- Card roles are structural data: `purchase` = Perusselvitys/TuontiApu/Tuontipalvelu, `secondary` = Etsintä/yhteys, `partner` = rahoitus/vaihtoauto.
++- Inputs, selects, textareas and CTAs are at least 48 px tall; public service-card input text is 16 px at every tested width. Labels remain persistent and decorative field icons are hidden from assistive technology.
++- Hover lift is 3 px over 180 ms on hover-capable pointers. Focus-within strengthens the border without movement; arrows move 3 px over 160 ms; active CTAs move 1 px. Reduced-motion removes these transitions and transforms.
++- Styles are scoped to `.home-premium` and `.home-cost-module`; admin and payment views are not restyled.
++
++## Changed files
++- `src/components/ServiceCardsHero.tsx`
++- `src/components/HeroPriceExample.tsx`
++- `src/index.css`
++- `src/components/__tests__/ServiceCardsHero.test.tsx`
++- `src/components/__tests__/HeroPriceExample.test.tsx`
++- `src/test/pricing.regression.test.ts`
++- `src/components/Pricing.tsx`
++- `src/components/IntentRouting.tsx`
++- `src/pages/CarVerticalPage.tsx`
++- `src/pages/Index.tsx`
++- `shared/pricing.json`
++- `public/llms.txt`
++- `supabase/functions/_shared/serviceContext.ts`
++- `supabase/functions/_shared/salesQualification.ts`
++- `AGENTS.md`
++- `docs/STATE.md`
++- `docs/ARCHITECTURE.md`
++- `roadmap.md`
++- this report
++
++## Actual checks
++- Locked clean install: `npm ci` passed; manifest and lock remained unchanged.
++- Independent Codex local validation at `aa6dec89`: 19/19 files and 153/153 tests passed with Node 26 and `NODE_OPTIONS=--no-experimental-webstorage`. Without that option, Node 26's experimental native `localStorage` caused four jsdom harness failures; this was a harness condition, not four application failures. Coverage included 15 card/handoff checks, semantic cost-table checks, role hierarchy and both chat paths' shared separate-Maksupalvelu boundary.
++- TypeScript: `bunx tsgo --noEmit -p tsconfig.app.json` passed.
++- Independent production build completed with 134 prerendered routes and a 96-URL sitemap (exit 0). Optional PDF regeneration warned that `xhtml2pdf` was unavailable; that optional artifact was not part of the successful site build.
++- Browser: 320, 390, 768 and 1440 CSS px passed. A 384 CSS px run at device scale 2 verified narrow reflow only; it did not verify true 200% browser zoom. Every checked case had exactly six cards, the BMW image and semantic table, six 16 px controls, 48 px CTAs, no horizontal overflow and no page errors.
++- CTA contrast from computed colors: purchase 5.05:1, petrol outline 4.99:1, partner 14.67:1. Title, field and CTA each accepted visible keyboard focus. Reduced-motion computed transition duration was `0s` and transform `none`.
++- Browser and DOM tests confirm all six populated drafts use router state plus service-isolated session storage, survive remount, keep clean query/hash and trigger no network send. Empty heading/submit navigation stores no draft.
++- Final 320 and 1440 masthead/card/table screenshots were captured and inspected.
++
++## Source and deployment truth
++- Independent Codex local validation used website commit `aa6dec89`. The website project remains `venturecore/caars-bright-spark` on `main`, connected through the platform. No GitHub push for the final two fixes is claimed without remote proof.
++- Companion repository remains separate; Codex will independently review/archive/push its companion diff. The website implementation does not use the companion Python repository.
++- Frontend was not published. No purchase, refund, live Klarna transaction, customer message, historical resend, credit purchase or Max mode was used.
++- Server checkout amounts and existing service routes were not changed. No historical paid-order content was changed.
++- Both service-aware chat functions were redeployed with the shared mandatory boundary. The knowledge-base text already stated the same rule and required no content change.
++
++## Limits and next tasks
++- Visual checks covered the requested public homepage surfaces, not a full-site visual regression.
++- A real delayed Klarna payment remains untested. Historical notification delivery for 17 old webhook failures remains unknown; 18 paid orders remain persisted, classified 4 handled / 14 open, with no automatic resend.
++- Next: Hans reviews the preview/diff. Publish only after explicit approval; separately review the 14 open historical orders against fulfillment evidence.
+
+--- a/public/llms.txt
++++ b/public/llms.txt
+@@ -11,7 +11,7 @@
+ - [Etsintäpalvelu+ (99 €)](/auton-etsinta): Sama etsintä sekä Perusselvitys (VIN, taustat, huoltohistoria, katsastukset) yhdestä valitusta autosta. Hyvitetään Avaimet käteen -tuonnissa.
+ - [Maksupalvelu (149 €)](/maksupalvelu): Kansainvälinen automaksu, valuutanvaihto pankin valuuttasopimuksella ja maksun ajoituksen koordinointi. Säästö tyypillisesti 3–4 % ostohinnasta. Palvelumaksua ei hyvitetä.
+ - [TuontiApu (250 €)](/tuontiapu): Henkilökohtainen apu Caarsin asiantuntijalta koko maahantuontiprosessin ajan, sekä kirjalliset vaihe vaiheelta -ohjeet dokumenteista, viranomaisilmoituksista, rekisteröinnistä ja katsastuksesta. Ei sisällä myyjän kontaktointia tai hintaneuvottelua ulkomailla.
+-- [Avaimet käteen -tuonti](/auton-tuontipalvelu): Ruotsista alk. 1 290 €, Saksasta alk. 1 990 €. Sisältää tarkistuksen, neuvottelun, maksun, vakuutetun rahdin Suomeen ja paperit. Toimitus sovittuun luovutuspisteeseen (ei kotiovelle).
++- [Avaimet käteen -tuonti](/auton-tuontipalvelu): Ruotsista alk. 1 290 €, Saksasta alk. 1 990 €. Sisältää sovitun tarjouksen mukaan taustojen selvityksen, neuvottelun, vakuutetun rahdin Suomeen ja dokumentit. Toimitus sovittuun luovutuspisteeseen (ei kotiovelle). Maksupalvelu 149 € on erillinen palvelu eikä sisälly tuontiin.
+ - [Hinnasto](/hinnasto): Kaikki palvelut, kuljetushinnat ja hyvityssäännöt.
+ 
+ ## Maakohtaiset säännöt
+
+--- a/roadmap.md
++++ b/roadmap.md
+@@ -46,3 +46,12 @@
+ - [x] Palvelukorttien handoff toimii myös, kun selain estää sessionStorage-getterin
+ - [x] Lopullinen 320/1280 px tarkistus: ei ylivuotoa eikä masthead-tekstin ja autokuvan päällekkäisyyttä
+ - [x] STATE tiivistetty yhdeksi ristiriidattomaksi CURRENT-yhteenvedoksi; arkkitehtuuri ja handoff päivitetty
++
++## 2026-10-04 — Premium homepage UI/UX
++- [x] Yhtenäistetty kuusi bento-palvelukorttia rooleihin: ostettavat oranssi, etsintä/yhteys petroolireuna, Autohalli neutraali kumppanipinta.
++- [x] Säilytetty erillinen teksti–BMW-kuva-masthead ja lisätty kolme nykyisiin väitteisiin perustuvaa kuvakemerkkiä.
++- [x] Muutettu Tesla-esimerkki semanttiseksi responsiiviseksi taulukoksi muuttamatta summia tai huomautuksia.
++- [x] Eritelty Maksupalvelu omaksi 149 € palvelukseen julkisissa kuvauksissa, tietopankissa ja molempien keskusteluavustajien pakollisissa rajoissa; Tesla-esimerkin summa ei sisällä sitä.
++- [x] Varmennettu Codex-ajossa 153/153 testiä Node 26:n kokeellinen web storage poistettuna, TypeScript, tuotantokäännös 134 reitillä ja 96 URL:n sivukartalla sekä 320/390/768/1440 px näkymät, fokus, reduced motion, 16 px kentät, 48 px CTA:t ja vähintään 4,99:1 CTA-kontrasti. 384 px/device-scale-2 varmisti uudelleenrivityksen, ei todellista 200 % selainzoomausta.
++- [x] Tiivistetty työpöytäkorttien sisältöalueet 64/48/72/120 px:iin ja lisätty pinotun kustannustaulukon eksplisiittiset saavutettavuusroolit sekä DOM-varmennukset.
++- [ ] Hans tarkistaa premium-esikatselun ja diffin; frontend julkaistaan vain erillisellä hyväksynnällä.
+
+--- a/shared/pricing.json
++++ b/shared/pricing.json
+@@ -93,7 +93,7 @@
+       "swedenFromLabel": "alk. 1 290 €",
+       "germanyFromPrice": 1990,
+       "germanyFromLabel": "alk. 1 990 €",
+-      "description": "Täyden palvelun tuonti Ruotsista tai Saksasta Suomeen: taustojen selvitys, neuvottelu, maksu, kuljetus, dokumentit ja kirjalliset viranomaisohjeet.",
++      "description": "Sovitun laajuuden autotuonti Ruotsista tai Saksasta Suomeen: taustojen selvitys, neuvottelu, vakuutettu kuljetus, dokumentit ja kirjalliset viranomaisohjeet. Maksupalvelu 149 € on erillinen palvelu eikä sisälly tuontiin.",
+       "shortDescription": "Täyden palvelun autotuonti Ruotsista tai Saksasta.",
+       "creditRule": "Aiemmin maksettu Perusselvitys 79 €, Etsintäpalvelu 79 € tai Etsintäpalvelu + 99 € vähennetään tuontihinnasta. Maksupalvelua ei hyvitetä."
+     }
+
+--- a/src/components/HeroPriceExample.tsx
++++ b/src/components/HeroPriceExample.tsx
+@@ -22,7 +22,7 @@
+     {
+       label: `${tuonti.name} (${stockholm.name})`,
+       value: stockholm.label,
+-      note: "Tarkistus, hintaneuvottelu, maksun hoito, vakuutettu rahti ja dokumentit",
++      note: "Taustojen selvitys, hintaneuvottelu, vakuutettu rahti ja dokumentit sovitun tarjouksen mukaan",
+     },
+     {
+       label: "Autovero",
+@@ -39,76 +39,85 @@
+   return (
+     <section
+       aria-label="Tuontikulujen esimerkkilaskelma ja linkki kustannuslaskuriin"
+-      className="border-y border-cta/20 bg-[hsl(var(--surface-teal-strong))]"
++      className="home-cost-module border-y border-border bg-[hsl(var(--surface-teal-strong))]"
+     >
+-      <div className="container mx-auto px-4 sm:px-6 py-12 md:py-16">
+-        <div className="mx-auto max-w-3xl">
++      <div className="container mx-auto px-4 py-14 sm:px-6 md:py-20">
++        <div className="mx-auto max-w-4xl">
+           <p className="text-xs font-bold uppercase tracking-widest text-primary mb-2">
+             Kustannuslaskuri
+           </p>
+           <h2 className="font-display text-2xl md:text-3xl font-bold text-foreground mb-3 leading-tight">
+             Selvitä tuontisi kokonaiskustannus hetkessä
+           </h2>
+-          <p className="text-sm md:text-base text-muted-foreground mb-6 leading-relaxed">
+-            Syötä auton sijainti ja valitse tarvitsemasi palvelut — näet arvion kuljetuksesta,
+-            palvelumaksuista ja muista kuluista ilman yllätyksiä. Ei rekisteröitymistä.
++          <p className="mb-6 text-sm leading-relaxed text-muted-foreground md:text-base">
++            Syötä auton sijainti ja valitse tarvitsemasi palvelut. Saat suuntaa-antavan arvion
++            kuljetuksesta, palvelumaksuista ja muista kuluista ilman rekisteröitymistä.
+           </p>
+ 
+           <div className="mb-8 flex flex-col sm:flex-row gap-3">
+             <Link
+               to="/kustannuslaskuri"
+-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 h-14 text-base font-bold text-primary-foreground shadow-glow transition hover:opacity-90"
++              className="home-cost-action inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-primary px-6 text-base font-bold text-primary-foreground shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+             >
+               <Calculator className="w-5 h-5" />
+               Laske oman autosi tuontihinta
+             </Link>
+             <Link
+               to="/hinnasto"
+-              className="inline-flex items-center justify-center gap-2 rounded-xl border-2 border-cta bg-background px-6 h-14 text-base font-bold text-cta transition hover:bg-cta/10"
++              className="home-cost-action inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border-2 border-cta bg-background px-6 text-base font-bold text-cta focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+             >
+               Katso hinnasto
+               <ArrowRight className="w-4 h-4" />
+             </Link>
+           </div>
+ 
+-          <div className="rounded-lg border border-cta/25 bg-card p-5 shadow-lg sm:p-7">
++          <div className="home-cost-card overflow-hidden border border-border bg-card shadow-lg">
++            <div className="p-5 pb-3 sm:p-7 sm:pb-4">
+             <p className="text-xs font-bold uppercase tracking-widest text-cta mb-3">
+               Esimerkkilaskelma
+             </p>
+             <h3 className="font-display text-lg md:text-xl font-bold text-foreground mb-4">
+               Tesla Model 3 Long Range — Tukholmasta Suomeen
+             </h3>
+-
+-            <ul className="divide-y divide-border">
++            </div>
++            <div className="overflow-x-auto">
++              <table role="table" className="w-full border-collapse text-left">
++                <caption className="sr-only">
++                  Havainnollinen arvio Tesla Model 3 Long Range -auton hinnasta ja tuontikuluista Tukholmasta Suomeen
++                </caption>
++                <tbody role="rowgroup" className="divide-y divide-border">
+                   {rows.map((r) => (
+-                <li key={r.label} className="py-3 first:pt-0">
+-                  <div className="flex items-baseline justify-between gap-4">
+-                    <span className="text-sm sm:text-base text-foreground/85">{r.label}</span>
+-                    <span className="text-sm sm:text-base font-bold text-foreground whitespace-nowrap">
++                    <tr role="row" key={r.label} className="align-top">
++                      <th role="rowheader" scope="row" className="px-5 py-4 text-sm font-semibold text-foreground sm:px-7 sm:text-base">
++                        {r.label}
++                        {r.note && <span className="mt-1 block text-xs font-normal leading-relaxed text-muted-foreground">{r.note}</span>}
++                      </th>
++                      <td role="cell" className="px-5 py-4 text-right text-sm font-bold tabular-nums text-foreground sm:px-7 sm:text-base">
+                         {r.value}
+-                    </span>
+-                  </div>
+-                  {r.note && (
+-                    <p className="mt-1 text-xs text-muted-foreground leading-relaxed">{r.note}</p>
+-                  )}
+-                </li>
++                      </td>
++                    </tr>
+                   ))}
+-            </ul>
+-
+-            <div className="mt-4 pt-4 border-t border-border flex items-baseline justify-between gap-4">
+-              <span className="text-base font-bold text-foreground">
++                </tbody>
++                <tfoot role="rowgroup">
++                  <tr role="row" className="home-cost-total">
++                    <th role="rowheader" scope="row" className="px-5 py-5 text-base font-extrabold text-foreground sm:px-7">
+                       Kokonaishinta Suomessa, valmiina ajoon
+-              </span>
+-              <span className="text-xl sm:text-2xl font-extrabold text-primary whitespace-nowrap">
++                    </th>
++                    <td role="cell" className="px-5 py-5 text-right text-xl font-extrabold tabular-nums text-primary sm:px-7 sm:text-2xl">
+                       n. 25 700 €
+-              </span>
++                    </td>
++                  </tr>
++                </tfoot>
++              </table>
+             </div>
+-
+-            <p className="mt-4 text-sm text-muted-foreground leading-relaxed">
+-              Vastaava auto Suomen käytettyjen markkinoilla tyypillisesti{" "}
+-              <span className="text-foreground font-semibold">28 000–30 000 €</span>. Esimerkissä
+-              säästöä kertyy siis reilusti, vaikka mukaan lasketaan kaikki tuontikulut.
+-              Omaa autoasi varten saat tarkan arvion kustannuslaskurista.
++            <p className="border-t border-border bg-muted/40 px-5 py-4 text-sm leading-relaxed text-foreground sm:px-7">
++              <span className="font-semibold">Maksupalvelu 149 € on erillinen valinnainen palvelu.</span>{" "}
++              Se ei sisälly tämän esimerkin noin 25 700 € kokonaishintaan.
++            </p>
++            <p className="border-t border-border px-5 py-5 text-sm leading-relaxed text-muted-foreground sm:px-7">
++              Vastaavan auton esimerkkihinta Suomen käytettyjen markkinoilla on{" "}
++              <span className="font-semibold text-foreground">28 000–30 000 €</span>. Hinnat ja kulut
++              vaihtelevat auton, sijainnin ja ajankohdan mukaan. Laske omalle autollesi suuntaa-antava arvio.
+             </p>
+           </div>
+         </div>
+
+--- a/src/components/IntentRouting.tsx
++++ b/src/components/IntentRouting.tsx
+@@ -528,7 +528,8 @@
+             </div>
+ 
+             <p className="text-[hsl(0_0%_88%)] text-base sm:text-lg leading-relaxed mb-6">
+-              Etsintä, taustojen selvitys, neuvottelu, maksu, kuljetus, dokumentit ja kirjalliset viranomaisohjeet yhdessä paketissa.
++              Etsintä, taustojen selvitys, neuvottelu, kuljetus, dokumentit ja kirjalliset viranomaisohjeet sovitun tarjouksen mukaan.
++              Maksupalvelu 149 € on erillinen palvelu.
+               Yksi tarjous, yksi yhteyshenkilö, yksi kokonaishinta.
+             </p>
+ 
+
+--- a/src/components/Pricing.tsx
++++ b/src/components/Pricing.tsx
+@@ -65,7 +65,7 @@
+     name: "Avaimet käteen -tuonti",
+     price: "1 290",
+     description: "Hoidamme tuonnin käytännön vaiheet puolestasi",
+-    clarifier: "Neuvottelu, maksu, kuljetus, dokumentit ja kirjalliset viranomaisohjeet — vakuutettu rahti Suomeen",
++    clarifier: "Neuvottelu, kuljetus, dokumentit ja kirjalliset viranomaisohjeet — vakuutettu rahti Suomeen. Maksupalvelu 149 € on erillinen palvelu.",
+     features: [
+       "Haku Turkuun",
+       "Viranomaisasioissa avustaminen",
+
+--- a/src/components/ServiceCardsHero.tsx
++++ b/src/components/ServiceCardsHero.tsx
+@@ -4,12 +4,16 @@
+   ArrowRight,
+   BadgeEuro,
+   CarFront,
+-  CheckCircle2,
+   ClipboardCheck,
++  Globe2,
+   Headphones,
++  Link2,
++  MapPinned,
+   MessageCircle,
++  MessageSquareText,
+   Search,
+   ShieldCheck,
++  Star,
+   type LucideIcon,
+ } from "lucide-react";
+ import { Button } from "@/components/ui/button";
+@@ -22,56 +26,48 @@
+ type CardStyle = {
+   icon: LucideIcon;
+   eyebrow: string;
+-  accent: string;
+-  iconStyle: string;
+-  buttonVariant: "default" | "teal" | "success" | "outline";
++  role: "purchase" | "secondary" | "partner";
+ };
+ 
+ const CARD_STYLES: Record<ServiceDef["id"], CardStyle> = {
+   perusselvitys: {
+     icon: ClipboardCheck,
+     eyebrow: "Kun auto on jo löytynyt",
+-    accent: "border-t-cta",
+-    iconStyle: "bg-cta/10 text-cta",
+-    buttonVariant: "teal",
++    role: "purchase",
+   },
+   etsinta: {
+     icon: Search,
+     eyebrow: "Kun tarvitset vaihtoehdot",
+-    accent: "border-t-primary",
+-    iconStyle: "bg-primary/10 text-primary",
+-    buttonVariant: "default",
++    role: "secondary",
+   },
+   tuontiapu: {
+     icon: Headphones,
+     eyebrow: "Kun tuot itse",
+-    accent: "border-t-success",
+-    iconStyle: "bg-success/10 text-success",
+-    buttonVariant: "success",
++    role: "purchase",
+   },
+   tuontipalvelu: {
+     icon: CarFront,
+     eyebrow: "Kun haluat valmiin kokonaisuuden",
+-    accent: "border-t-cta",
+-    iconStyle: "bg-cta/10 text-cta",
+-    buttonVariant: "teal",
++    role: "purchase",
+   },
+   yhteys: {
+     icon: MessageCircle,
+     eyebrow: "Kun haluat puhua ensin",
+-    accent: "border-t-success",
+-    iconStyle: "bg-success/10 text-success",
+-    buttonVariant: "success",
++    role: "secondary",
+   },
+   rahoitus: {
+     icon: BadgeEuro,
+     eyebrow: "Autohallin kautta",
+-    accent: "border-t-primary",
+-    iconStyle: "bg-primary/10 text-primary",
+-    buttonVariant: "outline",
++    role: "partner",
+   },
+ };
+ 
++const FIELD_ICONS: Record<ServiceDef["input"]["kind"], LucideIcon> = {
++  url: Link2,
++  text: MessageSquareText,
++  topic: Globe2,
++};
++
+ /** Homepage: six light service cards. Input is optional; heading link works without it. */
+ function ServiceCard({ s }: { s: ServiceDef }) {
+   const navigate = useNavigate();
+@@ -79,6 +75,7 @@
+   const inputId = `card-${s.id}-input`;
+   const style = CARD_STYLES[s.id];
+   const Icon = style.icon;
++  const FieldIcon = FIELD_ICONS[s.input.kind];
+ 
+   const go = (e: React.FormEvent) => {
+     e.preventDefault();
+@@ -96,35 +93,43 @@
+   return (
+     <form
+       onSubmit={go}
+-      className={`group flex min-h-full flex-col overflow-hidden rounded-lg border border-border border-t-4 bg-card p-5 shadow-card transition duration-300 hover:-translate-y-1 hover:shadow-card-hover ${style.accent}`}
++      className="home-service-card group flex min-h-full flex-col p-6"
+       aria-labelledby={`card-${s.id}-title`}
+       data-service-card={s.id}
++      data-card-role={style.role}
+     >
+-      <div className="flex items-start justify-between gap-4">
++      <div className="home-service-card__heading flex items-start justify-between gap-4">
+         <div>
+-          <p className="mb-2 text-xs font-bold uppercase text-foreground">{style.eyebrow}</p>
+-          <h2 id={`card-${s.id}-title`} className="text-xl font-extrabold normal-case tracking-normal">
+-            <Link to={s.route} className="text-foreground underline-offset-4 hover:text-primary hover:underline">
++          <p className="mb-2 text-xs font-bold uppercase text-muted-foreground">{style.eyebrow}</p>
++          <h2 id={`card-${s.id}-title`} className="text-xl font-extrabold normal-case leading-tight tracking-normal md:text-[22px]">
++            <Link to={s.route} className="rounded-sm text-foreground underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+               {s.title}
+             </Link>
+           </h2>
+         </div>
+-        <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg ${style.iconStyle}`} aria-hidden>
+-          <Icon className="h-5 w-5" />
++        <span className="home-service-card__icon flex h-12 w-12 shrink-0 items-center justify-center rounded-xl" aria-hidden>
++          <Icon className="h-6 w-6" />
+         </span>
+       </div>
+-      <p className="mt-2 text-base font-extrabold text-foreground">{s.price}</p>
+-      <p className="mt-2 text-sm text-foreground/80">{s.what}</p>
+-      <div className="mt-4 flex-1">
+-        <label htmlFor={inputId} className="mb-1 block text-sm font-medium text-foreground">
+-          {s.input.label} <span className="font-normal text-foreground/75">(valinnainen)</span>
++      {style.role === "partner" && (
++        <p className="home-partner-badge mt-4 w-fit rounded-full px-3 py-1 text-xs font-bold">
++          Kumppanipalvelu · Autohalli
++        </p>
++      )}
++      <p className="home-service-card__price mt-4 text-lg font-extrabold leading-snug text-foreground">{s.price}</p>
++      <p className="home-service-card__description mt-3 text-sm leading-relaxed text-muted-foreground">{s.what}</p>
++      <div className="home-service-card__field mt-5 flex-1">
++        <label htmlFor={inputId} className="mb-2 block text-sm font-semibold text-foreground">
++          {s.input.label} <span className="font-normal text-muted-foreground">(valinnainen)</span>
+         </label>
++        <div className="relative">
++          <FieldIcon className="pointer-events-none absolute left-3.5 top-4 h-[18px] w-[18px] text-muted-foreground" aria-hidden />
+           {s.input.kind === "topic" ? (
+             <select
+               id={inputId}
+               value={value}
+               onChange={(e) => setValue(e.target.value)}
+-            className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
++              className="home-service-control min-h-12 w-full rounded-lg border border-input bg-background py-3 pl-11 pr-9 text-base text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+             >
+               <option value="">Valitse…</option>
+               {s.input.options.map((o) => (
+@@ -132,44 +137,51 @@
+               ))}
+             </select>
+           ) : s.input.kind === "url" ? (
+-          <Input id={inputId} type="url" inputMode="url" value={value} onChange={(e) => setValue(e.target.value)} placeholder={s.input.placeholder} maxLength={500} className="h-11 bg-background" />
++            <Input id={inputId} type="url" inputMode="url" value={value} onChange={(e) => setValue(e.target.value)} placeholder={s.input.placeholder} maxLength={500} className="home-service-control min-h-12 bg-background pl-11 text-base md:text-base" />
+           ) : (
+-          <Textarea id={inputId} value={value} onChange={(e) => setValue(e.target.value)} placeholder={s.input.placeholder} maxLength={1000} rows={2} className="resize-none bg-background" />
++            <Textarea id={inputId} value={value} onChange={(e) => setValue(e.target.value)} placeholder={s.input.placeholder} maxLength={1000} rows={2} className="home-service-control min-h-24 resize-none bg-background py-3 pl-11 text-base" />
+           )}
+         </div>
+-      <Button type="submit" variant={style.buttonVariant} className="mt-4 h-11 w-full font-bold">
++      </div>
++      <Button type="submit" variant="secondary" className="home-service-card__cta mt-5 min-h-12 w-full font-bold">
+         {s.cta}
+-        <ArrowRight className="ml-2 h-4 w-4" aria-hidden />
++        <ArrowRight className="home-service-card__arrow ml-1 h-4 w-4" aria-hidden />
+       </Button>
+     </form>
+   );
+ }
+ 
+ const ServiceCardsHero = () => (
+-  <section className="relative overflow-hidden bg-background" aria-labelledby="services-heading">
+-    <div className="border-b border-cta/20 bg-background pt-28 md:pt-32">
+-      <div className="container mx-auto grid max-w-6xl items-center gap-8 px-4 pb-24 sm:px-6 md:grid-cols-[55fr_45fr] md:gap-10 md:pb-28">
++  <section className="home-premium relative overflow-hidden bg-background" aria-labelledby="services-heading">
++    <div className="home-masthead border-b border-border pt-28 md:pt-32">
++      <div className="container mx-auto grid max-w-6xl items-center gap-8 px-4 pb-14 sm:px-6 md:grid-cols-[55fr_45fr] md:gap-12 md:pb-20">
+         <div className="py-4 md:py-10">
+-          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-cta/30 bg-background/90 px-3 py-2 text-sm font-bold text-cta shadow-sm backdrop-blur-sm">
++          <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-cta/30 bg-card px-3 py-2 text-sm font-bold text-cta shadow-sm">
+             <ShieldCheck className="h-4 w-4" aria-hidden />
+             Auton tuonti turvallisesti vuodesta 2016
+           </div>
+-          <h1 id="services-heading" className="max-w-xl text-4xl leading-[1.08] text-foreground sm:text-5xl md:text-6xl">
++          <h1 id="services-heading" className="max-w-xl font-display text-4xl font-extrabold leading-[1.08] text-foreground sm:text-5xl md:text-6xl">
+             Parempi auto samalla rahalla
+           </h1>
+           <p className="mt-5 max-w-xl text-base font-medium leading-relaxed text-foreground/80 md:text-xl">
+             Etsintä, taustat tai koko tuonti. Valitse tilanteeseesi sopiva palvelu Ruotsista tai Saksasta.
+           </p>
+-          <ul className="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-sm font-semibold text-foreground/85">
+-            {["Yli 900 tuotua autoa", "4,9 / 5 asiakkaiden arvio", "Palvelu koko Suomeen"].map((item) => (
+-              <li key={item} className="flex items-center gap-2">
+-                <CheckCircle2 className="h-4 w-4 text-cta" aria-hidden />
+-                {item}
++          <ul className="mt-7 grid max-w-xl gap-3 sm:grid-cols-3">
++            <li className="home-trust-badge flex min-h-14 items-center gap-3 rounded-xl px-3 py-2 text-sm font-bold text-foreground">
++              <CarFront className="h-5 w-5 shrink-0 text-cta" aria-hidden />
++              Yli 900 tuotua autoa
++            </li>
++            <li className="home-trust-badge flex min-h-14 items-center gap-3 rounded-xl px-3 py-2 text-sm font-bold text-foreground">
++              <Star className="h-5 w-5 shrink-0 text-primary" aria-hidden />
++              4,9 / 5 asiakkaiden arvio
++            </li>
++            <li className="home-trust-badge flex min-h-14 items-center gap-3 rounded-xl px-3 py-2 text-sm font-bold text-foreground">
++              <MapPinned className="h-5 w-5 shrink-0 text-success" aria-hidden />
++              Palvelu koko Suomeen
+             </li>
+-            ))}
+           </ul>
+         </div>
+-        <div className="relative order-last aspect-[16/10] overflow-hidden rounded-lg border border-cta/25 bg-[hsl(var(--surface-teal-strong))] shadow-xl">
++        <div className="home-hero-photo relative order-last aspect-[16/10] overflow-hidden border border-cta/25 bg-[hsl(var(--surface-teal-strong))] shadow-xl">
+           <img
+             src={heroCar}
+             alt="BMW pohjoismaisella tiellä"
+@@ -182,18 +194,18 @@
+       </div>
+     </div>
+ 
+-    <div className="relative border-b border-cta/15 bg-[hsl(var(--surface-teal))] pb-16 md:pb-24">
++    <div className="home-services-band relative border-b border-border py-14 md:py-20">
+       <div className="container mx-auto max-w-6xl px-4 sm:px-6">
+-        <div className="relative z-20 -mt-16 mb-8 max-w-3xl rounded-lg border border-cta/20 bg-background/95 p-5 shadow-lg backdrop-blur-md md:-mt-20 md:p-7">
++        <div className="mb-9 max-w-3xl md:mb-11">
+           <p className="text-xs font-extrabold uppercase text-cta">Valitse seuraava askel</p>
+-          <h2 className="mt-2 text-2xl font-extrabold normal-case tracking-normal text-foreground md:text-3xl">
++          <h2 className="mt-2 text-2xl font-extrabold normal-case leading-tight tracking-normal text-foreground md:text-3xl">
+             Missä vaiheessa autokauppasi on?
+           </h2>
+           <p className="mt-2 text-sm leading-relaxed text-foreground/80 md:text-base">
+             Kerro lähtötilanteesi kerran. Valitsemasi palvelu avautuu valmiina jatkamaan juuri siitä.
+           </p>
+         </div>
+-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
++        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
+           {SERVICES.map((s) => (
+             <ServiceCard key={s.id} s={s} />
+           ))}
+
+--- /dev/null
++++ b/src/components/__tests__/HeroPriceExample.test.tsx
+@@ -0,0 +1,43 @@
++import { render, screen, within } from "@testing-library/react";
++import { MemoryRouter } from "react-router-dom";
++import { describe, expect, it } from "vitest";
++import HeroPriceExample from "@/components/HeroPriceExample";
++
++const renderExample = () =>
++  render(
++    <MemoryRouter>
++      <HeroPriceExample />
++    </MemoryRouter>,
++  );
++
++describe("HeroPriceExample", () => {
++  it("presents the illustrative cost breakdown as an accessible table", () => {
++    renderExample();
++    const table = screen.getByRole("table", { name: /havainnollinen arvio/i });
++    const rowGroups = within(table).getAllByRole("rowgroup");
++    expect(rowGroups).toHaveLength(2);
++    expect(within(table).getAllByRole("row")).toHaveLength(5);
++    expect(within(table).getAllByRole("rowheader")).toHaveLength(5);
++    expect(within(table).getAllByRole("cell")).toHaveLength(5);
++    expect(table).toHaveAttribute("role", "table");
++    expect(rowGroups.every((group) => group.getAttribute("role") === "rowgroup")).toBe(true);
++    expect(within(table).getAllByRole("row").every((row) => row.getAttribute("role") === "row")).toBe(true);
++    expect(within(table).getAllByRole("rowheader").every((header) => header.getAttribute("role") === "rowheader")).toBe(true);
++    expect(within(table).getAllByRole("cell").every((cell) => cell.getAttribute("role") === "cell")).toBe(true);
++    expect(within(table).getByRole("rowheader", { name: /auton hinta ruotsissa/i })).toBeInTheDocument();
++    expect(within(table).getByRole("rowheader", { name: /kokonaishinta suomessa/i })).toBeInTheDocument();
++    expect(within(table).getByText("n. 25 700 €")).toBeInTheDocument();
++    expect(within(table).queryByText(/maksupalvelu/i)).not.toBeInTheDocument();
++    expect(screen.getByText(/maksupalvelu 149 € on erillinen valinnainen palvelu/i)).toBeInTheDocument();
++    expect(screen.getByText(/ei sisälly tämän esimerkin noin 25 700 € kokonaishintaan/i)).toBeInTheDocument();
++  });
++
++  it("keeps calculator and pricing navigation explicit", () => {
++    renderExample();
++    expect(screen.getByRole("link", { name: /laske oman autosi tuontihinta/i })).toHaveAttribute(
++      "href",
++      "/kustannuslaskuri",
++    );
++    expect(screen.getByRole("link", { name: /katso hinnasto/i })).toHaveAttribute("href", "/hinnasto");
++  });
++});
+
+--- a/src/components/__tests__/ServiceCardsHero.test.tsx
++++ b/src/components/__tests__/ServiceCardsHero.test.tsx
+@@ -50,6 +50,15 @@
+   rahoitus: { route: "/rahoitus-ja-vaihtoauto", price: "Kysy tarjous" },
+ };
+ 
++const EXPECTED_ROLES: Record<ServiceId, "purchase" | "secondary" | "partner"> = {
++  perusselvitys: "purchase",
++  etsinta: "secondary",
++  tuontiapu: "purchase",
++  tuontipalvelu: "purchase",
++  yhteys: "secondary",
++  rahoitus: "partner",
++};
++
+ const fetchSpy = vi.fn();
+ beforeEach(() => {
+   cleanup();
+@@ -65,6 +74,7 @@
+     expect(cards).toHaveLength(6);
+     for (const s of SERVICES) {
+       const card = container.querySelector(`[data-service-card="${s.id}"]`)!;
++      expect(card.getAttribute("data-card-role")).toBe(EXPECTED_ROLES[s.id]);
+       const link = card.querySelector("h2 a")!;
+       expect(link.getAttribute("href")).toBe(EXPECTED[s.id].route);
+       if (EXPECTED[s.id].price) expect(card.textContent).toContain(EXPECTED[s.id].price);
+@@ -72,6 +82,8 @@
+       const control = card.querySelector("input, textarea, select")!;
+       expect(card.querySelector(`label[for="${control.id}"]`)).not.toBeNull();
+     }
++    expect(screen.getByText("Kumppanipalvelu · Autohalli")).toBeInTheDocument();
++    expect(screen.getAllByRole("button", { name: /^jatka/i })).toHaveLength(6);
+   });
+ 
+   it.each(SERVICES.map((s) => [s.id, s] as const))(
+
+--- a/src/index.css
++++ b/src/index.css
+@@ -33,6 +33,17 @@
+     --brand-turquoise-bright: 174 72% 50%;
+     --brand-orange-bright: 25 95% 56%;
+ 
++    /* Homepage premium system: scoped to .home-premium / .home-cost-module. */
++    --home-canvas: 195 23% 97%;
++    --home-surface: 0 0% 100%;
++    --home-partner: 195 20% 94%;
++    --home-border: 194 20% 88%;
++    --home-petrol: 177 88% 26%;
++    --home-petrol-soft: 174 42% 93%;
++    --home-orange: 24 90% 38%;
++    --home-shadow: 0 10px 30px -18px hsl(185 41% 13% / 0.28);
++    --home-shadow-hover: 0 18px 40px -20px hsl(185 41% 13% / 0.34);
++
+     /* Caars logo green – TRUST / SUCCESS / AI / LIVE DATA accent */
+     --brand-green: 152 70% 26%;
+     --brand-green-foreground: 0 0% 100%;
+@@ -530,3 +541,98 @@
+   animation: caarsPulseHighlight 1.4s ease-out 3;
+   border-radius: 12px;
+ }
++
++/* Homepage-only premium service system. Keeps admin and payment surfaces untouched. */
++.home-masthead { background: hsl(var(--home-canvas)); }
++.home-services-band { background: hsl(var(--home-petrol-soft)); }
++.home-hero-photo,
++.home-cost-card { border-radius: 24px; }
++.home-trust-badge {
++  border: 1px solid hsl(var(--home-border));
++  background: hsl(var(--home-surface));
++  box-shadow: var(--home-shadow);
++}
++.home-service-card {
++  border: 1px solid hsl(var(--home-border));
++  border-radius: 22px;
++  background: hsl(var(--home-surface));
++  box-shadow: var(--home-shadow);
++  transition: border-color 180ms ease-out, box-shadow 180ms ease-out, transform 180ms ease-out;
++}
++.home-service-card[data-card-role="partner"] { background: hsl(var(--home-partner)); }
++.home-service-card__icon {
++  color: hsl(var(--home-petrol));
++  background: hsl(var(--home-petrol-soft));
++}
++.home-service-card[data-card-role="purchase"] .home-service-card__icon {
++  color: hsl(var(--home-orange));
++  background: hsl(var(--primary) / 0.1);
++}
++.home-partner-badge {
++  color: hsl(var(--foreground));
++  border: 1px solid hsl(var(--home-border));
++  background: hsl(var(--home-surface));
++}
++.home-service-control { border-color: hsl(var(--input)); }
++.home-service-card__cta { min-height: 48px; }
++.home-service-card[data-card-role="purchase"] .home-service-card__cta {
++  color: hsl(var(--primary-foreground));
++  border-color: hsl(var(--home-orange));
++  background: hsl(var(--home-orange));
++}
++.home-service-card[data-card-role="secondary"] .home-service-card__cta {
++  color: hsl(var(--home-petrol));
++  border: 2px solid hsl(var(--home-petrol));
++  background: hsl(var(--home-surface));
++}
++.home-service-card[data-card-role="partner"] .home-service-card__cta {
++  color: hsl(var(--foreground));
++  border: 1px solid hsl(var(--muted-foreground));
++  background: hsl(var(--home-surface));
++}
++.home-service-card__arrow,
++.home-cost-action svg { transition: transform 160ms ease-out; }
++.home-cost-total { background: hsl(var(--home-petrol-soft)); }
++
++@media (min-width: 1024px) {
++  .home-service-card__heading { min-height: 64px; }
++  .home-service-card__price { min-height: 48px; }
++  .home-service-card__description { min-height: 72px; }
++  .home-service-card__field { min-height: 120px; }
++}
++
++@media (hover: hover) and (pointer: fine) {
++  .home-service-card:hover {
++    border-color: hsl(var(--home-petrol) / 0.55);
++    box-shadow: var(--home-shadow-hover);
++    transform: translateY(-3px);
++  }
++  .home-service-card:focus-within {
++    border-color: hsl(var(--ring));
++    box-shadow: var(--home-shadow-hover);
++  }
++  .home-service-card__cta:hover .home-service-card__arrow,
++  .home-cost-action:hover svg { transform: translateX(3px); }
++  .home-service-card__cta:active { transform: translateY(1px); }
++}
++
++@media (max-width: 480px) {
++  .home-cost-module table,
++  .home-cost-module tbody,
++  .home-cost-module tfoot,
++  .home-cost-module tr,
++  .home-cost-module th,
++  .home-cost-module td { display: block; width: 100%; }
++  .home-cost-module td { padding-top: 0; text-align: left; }
++  .home-cost-module tfoot td { padding-top: 0; }
++}
++
++@media (prefers-reduced-motion: reduce) {
++  .home-service-card,
++  .home-service-card__arrow,
++  .home-cost-action,
++  .home-cost-action svg {
++    transition: none !important;
++    transform: none !important;
++  }
++}
+
+--- a/src/pages/CarVerticalPage.tsx
++++ b/src/pages/CarVerticalPage.tsx
+@@ -180,8 +180,8 @@
+               <div className="text-3xl font-bold mb-1">alk. 1 290 €</div>
+               <div className="text-xs text-[#7BA0F0] mb-4">sis. carVertical-raportin</div>
+               <p className="text-sm text-muted-foreground mb-5 flex-1">
+-                Hoidamme tuonnin Ruotsista – taustojen selvitys, maksu, kuljetus,
+-                dokumentit ja kirjalliset viranomaisohjeet. carVertical aina mukana.
++                Hoidamme tuonnin Ruotsista – taustojen selvitys, kuljetus,
++                dokumentit ja kirjalliset viranomaisohjeet. Maksupalvelu 149 € on erillinen palvelu. carVertical aina mukana.
+               </p>
+               <Button asChild variant="outline">
+                 <a href="/hinnasto">Katso hinnasto</a>
+
+--- a/src/pages/Index.tsx
++++ b/src/pages/Index.tsx
+@@ -98,7 +98,7 @@
+         { "@type": "Country", name: "Germany" },
+       ],
+       description:
+-        "Sovitun laajuuden autotuonti: taustojen selvitys, neuvottelu, maksu, vakuutettu rahti Suomeen ja toimitus sovittuun luovutuspisteeseen.",
++        "Sovitun laajuuden autotuonti: taustojen selvitys, neuvottelu, vakuutettu rahti Suomeen ja toimitus sovittuun luovutuspisteeseen. Maksupalvelu 149 € on erillinen palvelu.",
+       offers: {
+         "@type": "Offer",
+         price: "1290",
+
+--- a/src/test/p0Durability.static.test.ts
++++ b/src/test/p0Durability.static.test.ts
+@@ -7,6 +7,7 @@
+ const webhook = read("supabase/functions/stripe-webhook/index.ts");
+ const fallbackChat = read("supabase/functions/chat/index.ts");
+ const primaryChat = read("supabase/functions/claude-chat/index.ts");
++const serviceContext = read("supabase/functions/_shared/serviceContext.ts");
+ const financingPage = read("src/pages/RahoitusJaVaihtoautoPage.tsx");
+ const contactPage = read("src/pages/Yhteystiedot.tsx");
+ 
+@@ -40,6 +41,14 @@
+     expect(fallbackChat).toMatch(/SALES_SYSTEM_PROMPT[\s\S]*SERVICE_SAFETY_CONTEXT/);
+   });
+ 
++  it("keeps Maksupalvelu separate from every import service in both chat paths", () => {
++    expect(serviceContext).toContain("Maksupalvelu on erillinen 149 € palvelu");
++    expect(serviceContext).toContain("Älä väitä maksun välityksen sisältyvän");
++    for (const source of [fallbackChat, primaryChat]) {
++      expect(source).toContain("SERVICE_SAFETY_CONTEXT");
++    }
++  });
++
+   it("mounts chat on financing and contact pages", () => {
+     expect(financingPage).toMatch(/<ChatBot\s*\/>/);
+     expect(contactPage).toMatch(/<ChatBot\s*\/>/);
+
+--- a/src/test/pricing.regression.test.ts
++++ b/src/test/pricing.regression.test.ts
+@@ -17,6 +17,8 @@
+     expect(pricing.services.maksupalvelu.price).toBe(149);
+     expect(pricing.services.avaimetKateenTuonti.swedenFromPrice).toBe(1290);
+     expect(pricing.services.avaimetKateenTuonti.germanyFromPrice).toBe(1990);
++    expect(pricing.services.avaimetKateenTuonti.description).toContain("Maksupalvelu 149 € on erillinen palvelu");
++    expect(pricing.services.avaimetKateenTuonti.description).not.toMatch(/neuvottelu, maksu,/i);
+   });
+ 
+   it("never mentions the deprecated 299 € startup fee in service descriptions", () => {
+
+--- a/supabase/functions/_shared/salesQualification.ts
++++ b/supabase/functions/_shared/salesQualification.ts
+@@ -16,9 +16,9 @@
+    huoltohistorian, lisäkuvat, käymme läpi taustat ja kunnon, annamme
+    kirjallisen suosituksen 1–3 arkipäivässä. Sisältää 3 autoa / 30 päivää.
+    Hyvitetään täysimääräisesti jos asiakas etenee tuontiin.
+-3. AVAIMET KÄTEEN -TUONTI alk. 1 290 € — Neuvottelu, maksu, kuljetus,
+-   verot, rekisteröinti — vakuutettu rahti Suomeen sovittuun luovutuspisteeseen. Aloitusmaksu 299 € käynnistää
+-   prosessin VASTA kun asiakas on päättänyt tuoda (ei mainita aiemmin).
++3. AVAIMET KÄTEEN -TUONTI alk. 1 290 € — Hankinta, neuvottelu, vakuutettu kuljetus,
++   dokumentit ja kirjalliset viranomaisohjeet sovitun tarjouksen mukaan. Maksupalvelu 149 € on
++   erillinen palvelu eikä sisälly tuontiin.
+ 
+ # 🎙️ SÄVY (Nordic, ei amerikkalainen myyjä)
+ - Suora, lyhyt, käytännöllinen, rauhallinen
+
+--- a/supabase/functions/_shared/serviceContext.ts
++++ b/supabase/functions/_shared/serviceContext.ts
+@@ -6,7 +6,7 @@
+   tuontiapu:
+     "Käyttäjä on TuontiApu-sivulla (250 €: kirjalliset ohjeet ja henkilökohtainen tuki itse tuovalle; ei myyjän kontaktointia eikä viranomaisasiointia asiakkaan puolesta).",
+   tuontipalvelu:
+-    "Käyttäjä on Tuontipalvelu-sivulla (Ruotsi alk. 1 290 €, Saksa alk. 1 990 €; hinta sovitaan tarjouksella laajuuden ja sijainnin mukaan; suorassa tuonnissa ei oteta vaihtoautoa).",
++    "Käyttäjä on Tuontipalvelu-sivulla (Ruotsi alk. 1 290 €, Saksa alk. 1 990 €; hankinnan, kuljetuksen ja dokumenttien laajuus sekä hinta sovitaan tarjouksella sijainnin mukaan; Maksupalvelu 149 € on erillinen eikä sisälly tuontiin; suorassa tuonnissa ei oteta vaihtoautoa).",
+   yhteys:
+     "Käyttäjä on yhteystietosivulla. Auta valitsemaan oikea palvelu ja ohjaa tarvittaessa puhelimeen, WhatsAppiin tai lomakkeeseen.",
+   rahoitus:
