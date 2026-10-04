@@ -61,3 +61,12 @@ Status at creation: implementation running; no completed fixes, tests, deploymen
 - Deposit metadata/confirmation and pending success-page fixes also dispatched with UI/chat/SEO phase.
 - Historical notifications unknown; avoid automatic resend. Historical order task dry-run requested with follow-up status classification.
 - Source ZIP downloaded through Lovable UI to local inspection workspace `/Users/he68/Development/caars-bright-spark`; it is a source snapshot, not a Git checkout. `npm ci --ignore-scripts` failed due to existing stale package-lock; local dependency installation/verification underway. No CI pass claimed.
+
+## Service and payment review checkpoint — 2026-10-04
+
+- Website SHA `6411c5f33993c0ff012ae06664feb73c4af8c46b`; intermediate diff archived as `2026-10-04-service-and-payment-website.diff`. Includes six cards/private handoff, service summaries/FAQ/SEO, financing route, pending-payment UI, deposit integration, and main order owner-token/per-effect migration.
+- Independent local snapshot: build exit 0, 134 prerender routes/96 sitemap URLs; unit suite 140/140 across 16 files. Optional audit PDF failed regeneration due to absent xhtml2pdf, without failing build. Lovable agent additionally reports clean npm ci, build and 140 tests passing.
+- Browser spot check: Perusselvitys card preserves a synthetic Blocket URL on clean /perusselvitys, visible summary and checkout draft; no automatic chat message. Other browser paths remain to validate after final corrections.
+- Source re-review identified remaining deposit recovery/fencing defects and service bot wiring/prompt/session gaps; exact corrections sent to Lovable. No final reliability claim yet.
+- User explicitly rejected the flattened near-white design. Brand/color/photo/hierarchy correction started; keep light accessibility without stripping Caars identity. Frontend remains unpublished.
+- Historic order classification: 4 handled, 14 open (12 no product classification, 1 Perusselvitys, 1 Tuonti). No blind backfill/resend performed; original 17 failed-delivery logs unavailable.

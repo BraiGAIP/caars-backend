@@ -41,6 +41,15 @@ Independent review confirms atomic order/task insertion and restricted RPC grant
 
 ## Current handoff
 
+### Website review checkpoint: SHA 6411c5f, 2026-10-04
+
+- Six cards, service-local session handoff, summaries/FAQ/SEO and new financing route implemented in unpublished preview. Independent local build passed (134 prerender routes, 96 sitemap URLs); 140/140 tests passed across 16 files. Optional audit-PDF regeneration failed because xhtml2pdf is absent; the build continued successfully.
+- Main order owner-token fencing, checked finalization, required confirmation errors and per-effect progress verified in source. Additive migrations and webhook are deployed through Lovable. Real delayed-payment end-to-end remains untested.
+- Historical classification: 18 paid persisted orders without order-linked tasks; four marked handled, 14 open (12 missing product classification, one Perusselvitys, one Tuonti). No old tasks or customer emails automatically added. Administrative review remains necessary before safe recovery.
+- Independent review found remaining deposit busy-claim acknowledgement/ownership/timeout issues, missing service context in fallback chat, absent bot widgets on contact/financing routes, admin-prompt boundary replacement, stale financing CTA route and shared chat session IDs. Corrections dispatched; P0/P1 are not yet declared fully complete.
+- User rejected washed-out preview. Restore Caars turquoise/orange, car imagery and section hierarchy while retaining the light accessible base and six functional cards. Design correction is active; preview is not published.
+- Diff archive: `docs/handoff/2026-10-04-service-and-payment-website.diff` compares 0b134658 to 6411c5f. This is an intermediate reviewed patch, not the final design.
+
 Baseline website SHA `13b0120d6c81535a9bfa7f3b2aad200a287bffe4`; phase-one request `umsg_01m41trz9jf9da5swrtzbtn7ng` produced website SHA `0b134658a13a11e9ee40603eebc35ff02f31f7a7`. Continuation request `umsg_01m41v2ax8f3ht49rt7m3b4fph` is running, with corrective P0 review request `umsg_01m41v4kz8e2ravzymdbnyk0xx` queued on thread `main`. Phase-one backend deployment and checks are recorded above; frontend publication and final website GitHub SHA synchronization are not yet verified.
 
 Independent local snapshot check: production build passed; unit suite has 118 passed and five obsolete Hero CTA-class tests failed. New card behavior and browser checks remain required. Local npm lock was regenerated for this check because the downloaded lock did not match phase-one package.json; this does not imply the remote lock was repaired.
