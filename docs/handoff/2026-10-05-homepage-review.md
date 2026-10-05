@@ -49,3 +49,10 @@ The Lovable plan was approved and implemented: website commit `8b92439c` (agent-
 - Code written by Claude and installed by Lovable byte-for-byte (`cmp` EXACT_CODE_MATCH), plus a follow-up: `brand-contrast brand-surface` on the hero section, and `:not(.brand-contrast *)` added to the orange-text and white-border rules in `src/styles/public-light.css`. Without these, that light-theme layer turned the white text dark. Mobile `pb-24` keeps the last expanded tile scrollable above the sticky CTA.
 - Agent-reported: 159/159 tests, build OK, computed colours verified (h1 white, orange rgb(242,122,19), turquoise rgb(34,195,166)), six boxes inside 1440×900. Credits 3.5 + 2.1. Latest website commit `1c1e61de` (agent-reported `85efc2d7`). Not published.
 - Open: the site header stays light (the mockup header was dark), pending Hans's decision.
+
+## Site-wide colour/contrast fix + brand sections (2026-10-05 evening, preview only)
+- Hans reported, testing on mobile: dark-on-dark hero text on /autoliikkeille and /hinnasto, remaining pale mint/green surfaces, peach chips and wide orange CTAs on white. Root cause: `src/styles/public-light.css` rewrote `text-white` and `bg-black/*` site-wide.
+- Fix: `data-hero-video` on HeroVideoBackground, dark-scope exemptions (`.brand-contrast`, `section:has([data-hero-video])`), neutral tokens (mint → `90 5% 95%`, petrol CTA → graphite, primary → #F27A13 with dark text, radius 0.375rem), a graphite sticky mobile bar and no emoji in headings.
+- Claude-written brand sections installed exactly: HeroPriceExample (light, chamfer card, graphite total row), WhyCaars (graphite numbered cards), HowCaarsWorks (white, graphite rule, orange number tiles) and the final CTA (graphite + photo).
+- Objective QA: `scripts/contrast-audit.mjs` (axe color-contrast + per-element pixel sampling), all sitemap routes at 390×844 and 1440×900. Final report `docs/qa/contrast-2026-10-05.json` generated 2026-10-05T19:42Z: 186 page views, 0 axe violations, 170 incomplete items all pixel-checked, 0 pixel failures. Worst case 3.06:1 on large text. Claude read the raw JSON independently.
+- Not published.
