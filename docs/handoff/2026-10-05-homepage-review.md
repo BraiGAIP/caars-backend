@@ -42,3 +42,10 @@ The Lovable plan was approved and implemented: website commit `8b92439c` (agent-
 - Files: `ServiceCardsHero.tsx`, `index.css` (scoped), `ServiceCardsHero.test.tsx`.
 - Agent-reported checks: 17/17 card tests, TypeScript and build; 320/390/768/1440 without overflow. The full suite was not independently rerun from this session (network policy blocks preview hosts).
 - Open: Hans to review the preview; decide whether card bodies should also go dark/tinted instead of white.
+
+## Hero v2 — Claude-designed, installed exactly (2026-10-05, preview only)
+- Hans rejected the Lovable-designed hero ("Lovable should not design visuals"). Claude designed the mockup instead: canvas artifact https://claude.ai/artifact/7Nr5eAD92jsbjsDpX38B7i (private). Hans approved it and asked for a graphite background instead of black (#22272D).
+- Requirement: all six boxes are visible without scrolling. Desktop 3×2 compact cards on the video hero, each with a chat field and a JATKA button. Mobile 2×3 tap tiles; tapping a tile expands its field in place (no extra floating layer).
+- Code written by Claude and installed by Lovable byte-for-byte (`cmp` EXACT_CODE_MATCH), plus a follow-up: `brand-contrast brand-surface` on the hero section, and `:not(.brand-contrast *)` added to the orange-text and white-border rules in `src/styles/public-light.css`. Without these, that light-theme layer turned the white text dark. Mobile `pb-24` keeps the last expanded tile scrollable above the sticky CTA.
+- Agent-reported: 159/159 tests, build OK, computed colours verified (h1 white, orange rgb(242,122,19), turquoise rgb(34,195,166)), six boxes inside 1440×900. Credits 3.5 + 2.1. Latest website commit `1c1e61de` (agent-reported `85efc2d7`). Not published.
+- Open: the site header stays light (the mockup header was dark), pending Hans's decision.
