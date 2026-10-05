@@ -34,3 +34,11 @@ Car-tax policy confirmed: no euro car-tax estimate from bots; disclaimer text on
 AI search field inside the masthead above the six cards (not replacing them), F1–F5 fixes,
 Edge Function rules (disclaimer appended in code, VAT/margin detection, EV 2026 note,
 registry-vs-test-drive, anonymous first analysis) in preview only, no publication.
+
+## Hero redesign — 2026-10-05 (preview only, not published)
+Hans rejected the pale hero (it had lost its colours, background photos and video, and the boxes were dull) and gave the 2026-10-04 social post (dark, Exo 2 uppercase, orange #F27A13, chamfered orange line, turquoise logo) as the brand reference.
+The Lovable plan was approved and implemented: website commit `8b92439c` (agent-reported `a80fb3ec`), 5.4 credits.
+- Changes: video hero (Volvo V90) with dark overlay, orange eyebrow, H1 "PAREMPI AUTO SAMALLA RAHALLA" + orange "— RUOTSISTA TAI SAKSASTA", dark trust chips, all six cards inside the hero with photo headers, chamfered orange edge, uppercase titles, role-coloured prices and chat-composer fields.
+- Files: `ServiceCardsHero.tsx`, `index.css` (scoped), `ServiceCardsHero.test.tsx`.
+- Agent-reported checks: 17/17 card tests, TypeScript and build; 320/390/768/1440 without overflow. The full suite was not independently rerun from this session (network policy blocks preview hosts).
+- Open: Hans to review the preview; decide whether card bodies should also go dark/tinted instead of white.
