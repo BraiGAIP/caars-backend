@@ -107,14 +107,14 @@ Reference image: `assets/brand-reference-social-post.jpg`. The site may be fresh
 | Phase 3 | `933557e5` | Turquoise CTA contrast, MALLI watermark, audit 0/0 (verified from raw JSON). **Published by Hans 2026-10-06.** |
 | Phase B (backend) | `cd814a02` | Country rules in both chatbots, emails and listing guidance; `vatDetect`; `LISTING_RULES_PROMPT`; anonymous 1-free-analysis; approval queue (`outbound_message_drafts`, `outbound-draft-decide`, Hyväksyntäjono page). 184/184 tests. Claude verified that the two cron senders no longer call Resend. |
 | Phase C | `cc5f690e` | Autoverolaskuri: tables from vero.fi (1172/2021, 777/2020, 1365/2018 WLTP, 1481/2015 NEDC), `estimateCarTax`, `/autoverolaskuri` page (Claude design), chatbot tool use + code-appended disclaimer, SEK=11 everywhere. 197/197 tests, audit 0/0. |
-| Phase D | in progress 2026-10-06 | Homepage FAQ (`HomeFAQ.tsx` + `shared/homeFaq.json`), one Organization + AutomotiveBusiness (LocalBusiness) + FAQPage JSON-LD, old "no euro tax estimate" texts replaced |
+| Phase D | `947278e6` | Homepage FAQ (`HomeFAQ.tsx` + `shared/homeFaq.json`); the prerendered `/` has exactly 1 Organization, 1 AutomotiveBusiness and 1 FAQPage, and all 4 JSON-LD blocks parse. The old "no euro tax estimate" texts are replaced on 5 pages, the Perusselvitys FAQ, llms.txt and 3 AI tools. 197/197 tests. Audit 0/0 on 188 checks (Claude read the JSON, generated 2026-10-06T09:40Z). |
 
 Exact source of every Claude-designed component is in `authored/`. The briefs sent to Lovable are in `lovable-briefs/`.
 
 ## 5. Open items (next steps)
 
 1. **Publish** (Hans): phases B–D frontend (Autoverolaskuri page, homepage FAQ, Hyväksyntäjono page). Until then, approval drafts wait in the DB and nothing is sent.
-2. **Phase D:** verify its report (one Organization in the prerendered `/`, JSON-LD parses, audit 0/0).
+2. Phase D: done and verified. Nothing left open from it.
 3. **Autoverolaskuri gaps** (the calculator sends users to Verohallinto instead of guessing):
    - WLTP cars registered 1.9.–2.12.2018 (the table is a scanned PDF and must be typed in by hand and double-checked);
    - cars registered before 2016;

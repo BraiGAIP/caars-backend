@@ -100,3 +100,10 @@ The Lovable plan was approved and implemented: website commit `8b92439c` (agent-
   - Unsupported (the calculator sends users to Verohallinto): WLTP 1.9.–2.12.2018, before 2016, no EU type approval.
 - Phase D (approved by Hans via the Lovable plan pause; in progress): HomeFAQ + FAQPage, a single Organization + AutomotiveBusiness, old "no euro estimate" texts replaced.
 - Codex handoff: `claude-2026-10-05/CODEX_HANDOFF.md`.
+- Phase D done (website commit `947278e6`, 9.2 credits):
+  - HomeFAQ is placed before the final CTA;
+  - the prerendered `/` has 1 Organization, 1 AutomotiveBusiness and 1 FAQPage (the old unverified LocalBusiness with opening hours, geo and reviews was removed);
+  - the old "no euro tax estimate" texts are replaced on Auton etsintä, Ajoneuvon tuonti, Kuljetus ja rekisteröinti, TuontiApu (FAQ and tax section) and the Polestar 2 blog post, in the Perusselvitys FAQ and llms.txt, and in market-ai-enrich, perusselvitys-ai-draft and sales-coach-analyze;
+  - 197/197 tests;
+  - audit 188 checks, 0/0 (Claude read the JSON).
+- Not published; waiting for Hans.
