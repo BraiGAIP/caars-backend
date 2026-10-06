@@ -64,3 +64,39 @@ The Lovable plan was approved and implemented: website commit `8b92439c` (agent-
 - Phase 3 (sent to Lovable): brand-skin rules 6 (turquoise buttons → #22C3A6 with #16191D text, word-match so hover-only outline buttons are untouched) and 7 (`[data-watermark]` at 6 % graphite); MALLI span gets `data-watermark`; audit script excludes only `[data-watermark]` (WCAG 1.4.3 incidental text) and reports `watermarkExcluded` in the summary. Acceptance 0 violations / 0 pixel failures / 0 errors.
 - Not published. Remaining superprompt items: Edge Function rules, LocalBusiness/FAQPage schema, agent integration (approval queue only, no auto-sending).
 - Phase 3 result (website commit `933557e5`, 2.1 credits): Claude read the raw audit JSON (generated 2026-10-05T21:17Z) independently. 186 page views, 0 axe violations, 156 incomplete items all pixel-checked, 0 pixel failures, 0 errors; 2 exclusions, both the MALLI watermark on /perusselvitys (one per viewport). Worst case 3.06:1 on large orange text (threshold 3:1); orange eyebrows 4.57:1 (threshold 4.5:1). "Kysy AI:lta" computed rgb(22,25,29) on rgb(34,195,166). 164/164 tests, build OK. Not published — awaiting Hans's review of the preview.
+
+## 2026-10-06: publish + backend rules + Autoverolaskuri
+- Hans published phase 3 and said "voit edetä".
+- Decisions (AskUserQuestion, 2026-10-06):
+  - stop automatic emails 2 + 3 (analyzer follow-up, recovery) and route them to an approval queue; `send-hero-analyzer` stays immediate;
+  - backend changes go direct after tests;
+  - 1 free link analysis per anonymous visitor;
+  - build an Autoverolaskuri instead of a "no euros" disclaimer.
+- Hans's Autoverolaskuri spec:
+  - name "Autoverolaskuri", with its own subpage and support in the chatbot;
+  - the user's own Finnish price estimate is the input;
+  - combined CO2 with the correct NEDC/WLTP rule;
+  - result as a euro range;
+  - SEK = 11 site-wide;
+  - the disclaimer is always visible;
+  - the page includes self-help links to Verohallinto.
+- Phase B (website commit `cd814a02`, 17.8 credits):
+  - country rules in code (both chatbots, `listingExtract`, `send-hero-analyzer`, `send-analyzer-followup`);
+  - `vatDetect` for SE + DE;
+  - `LISTING_RULES_PROMPT` (VAT, EV 2026, registry vs test drive);
+  - `anonymous_analysis_usage`;
+  - `outbound_message_drafts`, `outbound-draft-decide` and the Hyväksyntäjono page;
+  - 184/184 tests;
+  - Claude read both cron functions and confirmed they no longer send.
+- Phase C (`cc5f690e`, 19.1 credits):
+  - vero.fi tables encoded;
+  - `estimateCarTax`;
+  - `/autoverolaskuri` installed from Claude's exact code;
+  - claude-chat uses tool use; the chat fallback runs a pre-compute step;
+  - disclaimer appended in code;
+  - SEK conversion changed from about 11.5 to 11 in two places (the homepage Tesla example is now ~25 400 €);
+  - 197/197 tests, audit 0/0 on 94 routes.
+  - Claude checked the 128 g/km → 11,1 % → 3 200–3 900 € example against table 1 A.
+  - Unsupported (the calculator sends users to Verohallinto): WLTP 1.9.–2.12.2018, before 2016, no EU type approval.
+- Phase D (approved by Hans via the Lovable plan pause; in progress): HomeFAQ + FAQPage, a single Organization + AutomotiveBusiness, old "no euro estimate" texts replaced.
+- Codex handoff: `claude-2026-10-05/CODEX_HANDOFF.md`.

@@ -1,0 +1,34 @@
+[
+  {
+    "q": "Mistä maista Caars tuo autoja?",
+    "a": "Tuomme autoja Ruotsista ja Saksasta. Palvelemme asiakkaita koko Suomessa, ja toimistomme on Raisiossa Turun vieressä."
+  },
+  {
+    "q": "Mitä Perusselvitys maksaa ja mitä se sisältää?",
+    "a": "Perusselvitys maksaa 79 € ja se tehdään Ruotsista löytämällesi autolle. Selvitämme auton taustan: omistajahistorian, katsastukset, kilometrit, vauriot ja mahdolliset velat ennen kuin maksat autosta."
+  },
+  {
+    "q": "Entä jos auto on myynnissä Saksassa?",
+    "a": "Perusselvitys ei ole saatavilla Saksan autoille. Saksan autoihin tarjoamme Etsintäpalvelun (79 €), Etsintäpalvelu+:n (99 €) tai Saksan tuontipalvelun alkaen 1 990 €."
+  },
+  {
+    "q": "Paljonko tuontipalvelu maksaa?",
+    "a": "Tuontipalvelu maksaa Ruotsista alkaen 1 290 € ja Saksasta alkaen 1 990 €. Hintaan sisältyy auton hankinta ja vakuutettu kuljetus Suomeen."
+  },
+  {
+    "q": "Paljonko tuontiauton autovero on?",
+    "a": "Voit arvioida autoveron Caarsin Autoverolaskurilla osoitteessa caars.fi/autoverolaskuri. Arvio perustuu omaan arvioosi auton hinnasta Suomessa sekä auton päästö- ja rekisteröintitietoihin. Laskurin summa on suuntaa-antava arvio: lopullisen autoveron määrää aina Verohallinto, eikä Caars vastaa veroarvion oikeellisuudesta."
+  },
+  {
+    "q": "Korvaako taustaselvitys koeajon?",
+    "a": "Ei korvaa. Rekisteri- ja historiatiedot kertovat auton taustan, mutta ne eivät korvaa koeajoa tai fyysistä kuntotarkastusta paikan päällä. Paras lopputulos syntyy, kun molemmat tehdään."
+  },
+  {
+    "q": "Mitä marginaaliverotus tai vähennyskelpoinen ALV tarkoittaa ilmoituksessa?",
+    "a": "Marginaaliverotetussa autossa arvonlisäveroa ei eritellä, ja ilmoitettu hinta on lopullinen. Jos auto myydään vähennyskelpoisella arvonlisäverolla (Ruotsissa moms, Saksassa MwSt. ausweisbar), verokohtelu kannattaa selvittää ennen ostoa. Kysy meiltä, niin kerromme mitä se tarkoittaa juuri sinun kohdallasi."
+  },
+  {
+    "q": "Paljonko sähköauton ajoneuvovero on vuonna 2026?",
+    "a": "Täyssähköauton autovero on 0 %, mutta vuotuisen ajoneuvoveron perusvero nousi 1.1.2026 alkaen 53,29 eurosta 106,21 euroon vuodessa (lakimuutos 814/2024). Myös sähköauton käyttövoimavero nousi."
+  }
+]
