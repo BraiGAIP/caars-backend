@@ -107,3 +107,4 @@ The Lovable plan was approved and implemented: website commit `8b92439c` (agent-
   - 197/197 tests;
   - audit 188 checks, 0/0 (Claude read the JSON).
 - Not published; waiting for Hans.
+- Handoff doc copied into the website repo (website commit `3343d452`): `docs/handoff/2026-10-06-claude-codex-handoff.md`, with a pointer line at the top of `AGENTS.md`.
