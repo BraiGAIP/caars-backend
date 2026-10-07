@@ -5,7 +5,7 @@ Inspected 2026-10-07. All information in this document describes the public upst
 - Repository: https://github.com/msitarzewski/agency-agents
 - Inspected revision: `5baafd5f1452e9785c413065b033ec083ab27757`.
 - License: MIT, Copyright (c) 2025 AgentLand Contributors. Include the upstream license when copying substantial source content.
-- Inventory: 267 Markdown files starting with agent-name frontmatter in the 18 divisions declared by the upstream `divisions.json`. Conversion outputs and playbooks are excluded.
+- Inventory: 282 Markdown files with a `name:` field in initial YAML frontmatter, counted recursively in the 18 divisions declared by upstream `divisions.json`. This includes 15 nested game-development roles omitted by a flat directory count. Conversion outputs and playbooks are excluded.
 
 | Responsibility | Upstream source |
 | --- | --- |
@@ -22,13 +22,15 @@ Run in the checked-out upstream revision:
 
 ```python
 import json
+import re
 from pathlib import Path
 
 root = Path('.')
 divisions = json.loads((root / 'divisions.json').read_text())['divisions']
 roles = [path for division in divisions
-         for path in (root / division).glob('*.md')
-         if path.read_text().startswith('---\nname:')]
-assert len(roles) == 267
+         for path in (root / division).rglob('*.md')
+         if (frontmatter := re.match(r'^---\n(.*?)\n---', path.read_text(), re.S))
+         and re.search(r'^name:', frontmatter[1], re.M)]
+assert len(roles) == 282
 assert len(divisions) == 18
 ```
