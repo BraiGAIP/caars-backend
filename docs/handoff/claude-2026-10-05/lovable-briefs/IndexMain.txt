@@ -1,0 +1,37 @@
+        {/* 4. Asiakaskokemukset — light grey */}
+        <Suspense fallback={null}>
+          <HomeReviews />
+        </Suspense>
+
+        {/* 5. Sama raha, parempi auto — white */}
+        <Suspense fallback={null}>
+          <section className="bg-white py-16 text-[#1B2025] md:py-24">
+            <div className="container mx-auto max-w-[1240px] px-4 sm:px-6">
+              <SavingsComparison />
+            </div>
+          </section>
+        </Suspense>
+
+        {/* 6. Entä jos auto ei ole hyvä? — graphite */}
+        <Suspense fallback={null}>
+          <WhyCheckSection />
+        </Suspense>
+
+        {/* 7. Toteutuneet toimitukset — light grey */}
+        <Suspense fallback={null}>
+          <section className="bg-[#F2F3F1] py-16 text-[#1B2025] md:py-24">
+            <div className="container mx-auto max-w-[1240px] px-4 sm:px-6">
+              <CompletedDeals />
+            </div>
+          </section>
+        </Suspense>
+
+        {/* 8. Palvelut ja hinnat — graphite */}
+        <Suspense fallback={null}>
+          <Pricing />
+        </Suspense>
+
+        {/* 8b. Kuka palvelun takana — white */}
+        <Suspense fallback={null}>
+          <FounderSection />
+        </Suspense>

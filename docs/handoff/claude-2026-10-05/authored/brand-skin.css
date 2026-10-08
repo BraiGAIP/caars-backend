@@ -1,0 +1,102 @@
+/**
+ * CAARS BRAND SKIN (2026-10-05) — loaded AFTER public-light.css.
+ * Gives legacy public pages the approved Caars look without per-page rewrites:
+ *  1. Legacy dark sections (absolute gradient layer from-[hsl(220…)]) become
+ *     graphite brand sections with white text again (they were flattened to grey).
+ *  2. Legacy primary buttons → square, uppercase, orange with dark text.
+ *  3. Legacy pill eyebrows → orange uppercase eyebrow text.
+ *  4. Legacy section h2 (font-display font-bold) get the orange brand rule.
+ *  5. Legacy light cards get the orange top accent.
+ * Components already built in the new system (brand-contrast/brand-surface/
+ * brand-light-card, font-black headings) are not touched.
+ */
+
+/* ---------- 1. Legacy dark sections → graphite ---------- */
+html.theme-light main section:has(> .absolute.inset-0[class*="from-[hsl(220"]):not(:has(> .absolute.inset-0[class*="bg-[hsl(90"])):not(.brand-contrast) {
+  background-color: #22272D !important;
+  color: #FFFFFF;
+}
+html.theme-light main section:has(> .absolute.inset-0[class*="from-[hsl(220"]):not(:has(> .absolute.inset-0[class*="bg-[hsl(90"])) > .absolute.inset-0[class*="from-[hsl(220"] {
+  background-image: none !important;
+  background-color: #22272D !important;
+}
+/* restore white text inside those sections (public-light turned it dark) */
+html.theme-light main section:has(> .absolute.inset-0[class*="from-[hsl(220"]):not(:has(> .absolute.inset-0[class*="bg-[hsl(90"])) :is(
+  [class~="text-white"], [class*="text-white/"], [class*="text-[hsl(0_0%_100%"], h1, h2, h3, h4, p, li, span, div
+):not(.brand-light-card *):not(.bg-card *):not([class*="bg-card"]):not([class*="bg-white"]):not([class*="bg-white"] *):not(button):not(button *):not(a[class*="bg-"]):not(a[class*="bg-"] *):not([class*="text-primary"]):not([class*="text-[#F27A13]"]):not([class*="text-[hsl(var(--cta"]):not([class*="text-[hsl(172"]) {
+  color: #FFFFFF !important;
+}
+html.theme-light main section:has(> .absolute.inset-0[class*="from-[hsl(220"]):not(:has(> .absolute.inset-0[class*="bg-[hsl(90"])) :is([class*="text-primary"]):not(.bg-card *):not(.brand-light-card *) {
+  color: #F27A13 !important;
+}
+html.theme-light main section:has(> .absolute.inset-0[class*="from-[hsl(220"]):not(:has(> .absolute.inset-0[class*="bg-[hsl(90"])) :is([class*="bg-[hsl(0_0%_100%/0.0"], [class*="bg-white/5"], [class*="bg-white/10"]) {
+  background-color: #2C333A !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+html.theme-light main section:has(> .absolute.inset-0[class*="from-[hsl(220"]):not(:has(> .absolute.inset-0[class*="bg-[hsl(90"])) :is([class*="border-[hsl(0_0%_100%"], [class*="border-white/"]) {
+  border-color: rgba(255, 255, 255, 0.14) !important;
+}
+
+/* ---------- 2. Legacy primary buttons ---------- */
+html.theme-light main :is(button, a)[class*="bg-primary"]:not([class*="bg-primary/"]) {
+  border-radius: 0.25rem !important;
+  background-color: #F27A13 !important;
+  color: #16191D !important;
+  font-weight: 800 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  box-shadow: none !important;
+}
+html.theme-light main :is(button, a)[class*="bg-primary"]:not([class*="bg-primary/"]):hover {
+  background-color: #FF9A45 !important;
+  transform: none !important;
+}
+html.theme-light main :is(button, a)[class*="bg-primary"]:not([class*="bg-primary/"]) svg {
+  color: currentColor !important;
+}
+
+/* ---------- 3. Legacy pill eyebrows ---------- */
+html.theme-light main section span.inline-flex.rounded-full:is([class*="bg-primary/"], [class*="bg-[hsl(0_0%_100%/0.06)]"]):not(.brand-contrast *) {
+  background: transparent !important;
+  border: 0 !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  font-size: 0.8125rem !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #B4520A !important;
+}
+html.theme-light main section:has(> .absolute.inset-0[class*="from-[hsl(220"]):not(:has(> .absolute.inset-0[class*="bg-[hsl(90"])) span.inline-flex.rounded-full:is([class*="bg-primary/"], [class*="bg-[hsl(0_0%_100%/0.06)]"]) {
+  background: transparent !important;
+  border: 0 !important;
+  padding: 0 !important;
+  font-size: 0.8125rem !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #F27A13 !important;
+}
+
+/* ---------- 4. Orange rule under legacy section headings ---------- */
+html.theme-light main section h2.font-display.font-bold:not([class*="text-xl"]):not([class*="text-lg"]):not(.bg-card h2):not([class*="bg-"] h2)::after {
+  content: "";
+  display: block;
+  width: 96px;
+  height: 3px;
+  margin-top: 16px;
+  background: #F27A13;
+}
+html.theme-light main section :is(.text-center h2.font-display.font-bold, h2.font-display.font-bold.text-center)::after {
+  margin-left: auto;
+  margin-right: auto;
+}
+html.theme-light main section h2.font-display.font-bold {
+  font-weight: 900 !important;
+}
+
+/* ---------- 5. Legacy light cards: orange top accent ---------- */
+html.theme-light main section .bg-card:is([class*="rounded-2xl"], [class*="rounded-xl"], [class*="rounded-3xl"]).border:not(input):not(textarea):not(.brand-light-card) {
+  border-radius: 0.375rem !important;
+  box-shadow: inset 0 4px 0 #F27A13, 0 1px 2px rgba(27, 32, 37, 0.06) !important;
+}

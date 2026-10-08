@@ -1,0 +1,317 @@
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  ArrowRight,
+  BadgeEuro,
+  Bot,
+  CarFront,
+  ClipboardCheck,
+  Headphones,
+  MapPinned,
+  MessageCircle,
+  Search,
+  ShieldCheck,
+  Star,
+  Truck,
+  type LucideIcon,
+} from "lucide-react";
+import { SERVICES, type ServiceDef } from "@/config/services";
+import { saveHandoff, type ServiceId } from "@/lib/serviceHandoff";
+import HeroVideoBackground from "@/components/HeroVideoBackground";
+
+/**
+ * Homepage hero: Caars social-post look (graphite, Exo 2 uppercase, orange
+ * #F27A13 + turquoise #22C3A6, chamfered edges). All six service boxes sit in
+ * the first viewport on desktop (3 × 2). On mobile they are 2 × 3 tap tiles;
+ * tapping one expands its chat field in place (no extra floating layer).
+ * Data, routes, prices and the handoff flow come from SERVICES unchanged.
+ */
+
+type Role = "purchase" | "secondary" | "partner";
+
+type CardStyle = {
+  icon: LucideIcon;
+  eyebrow: string;
+  short: string;
+  priceShort: string;
+  placeholder: string;
+  role: Role;
+};
+
+const CARD_STYLES: Record<ServiceDef["id"], CardStyle> = {
+  perusselvitys: {
+    icon: ClipboardCheck,
+    eyebrow: "Löysin auton Ruotsista",
+    short: "Taustat, huoltohistoria ja kunto yhdestä autosta ennen ostoa.",
+    priceShort: "79 €",
+    placeholder: "Liitä Blocket-linkki tähän",
+    role: "purchase",
+  },
+  etsinta: {
+    icon: Search,
+    eyebrow: "Etsi minulle auto",
+    short: "Kolme perusteltua autoehdotusta. Etsintä + taustat 99 €.",
+    priceShort: "79 €",
+    placeholder: "Millaista autoa etsit?",
+    role: "secondary",
+  },
+  tuontiapu: {
+    icon: Headphones,
+    eyebrow: "Tuon auton itse",
+    short: "Henkilökohtainen tuki ja vaiheittaiset ohjeet koko tuontiin.",
+    priceShort: "250 €",
+    placeholder: "Mitä autoa olet tuomassa?",
+    role: "purchase",
+  },
+  tuontipalvelu: {
+    icon: Truck,
+    eyebrow: "Hoitakaa koko tuonti",
+    short: "Hankinta ja vakuutettu kuljetus Suomeen. Ruotsi alk. 1 290 € · Saksa alk. 1 990 €.",
+    priceShort: "alk. 1 290 €",
+    placeholder: "Mistä maasta?",
+    role: "purchase",
+  },
+  yhteys: {
+    icon: MessageCircle,
+    eyebrow: "Haluan kysyä ensin",
+    short: "Kysy ihmiseltä: puhelin, WhatsApp tai suoraan tästä.",
+    priceShort: "Maksuton",
+    placeholder: "Kirjoita kysymyksesi",
+    role: "secondary",
+  },
+  rahoitus: {
+    icon: BadgeEuro,
+    eyebrow: "Kumppanipalvelu · Autohalli.com",
+    short: "Rahoitus ja vaihtoauto Autohalli.comin kautta, luottopäätöksellä.",
+    priceShort: "Kysy tarjous",
+    placeholder: "Mistä haluat kysyä?",
+    role: "partner",
+  },
+};
+
+const ROLE_COLORS: Record<Role, { text: string; bar: string; tile: string; send: string; ring: string }> = {
+  purchase: {
+    text: "text-[#F27A13]",
+    bar: "bg-[#F27A13]",
+    tile: "border-[#F27A13]/50 bg-[#F27A13]/15",
+    send: "bg-[#F27A13] hover:bg-[#FF9A45]",
+    ring: "border-[#F27A13]",
+  },
+  secondary: {
+    text: "text-[#22C3A6]",
+    bar: "bg-[#22C3A6]",
+    tile: "border-[#22C3A6]/50 bg-[#22C3A6]/15",
+    send: "bg-[#22C3A6] hover:bg-[#4FD6BE]",
+    ring: "border-[#22C3A6]",
+  },
+  partner: {
+    text: "text-[#E6EBEE]",
+    bar: "bg-[#C9D1D6]",
+    tile: "border-[#C9D1D6]/45 bg-[#C9D1D6]/10",
+    send: "bg-[#E6EBEE] hover:bg-white",
+    ring: "border-[#E6EBEE]",
+  },
+};
+
+const CHAMFER_CARD = "[clip-path:polygon(0_0,calc(100%-22px)_0,100%_22px,100%_100%,0_100%)]";
+const CHAMFER_BAR = "[clip-path:polygon(0_0,100%_0,calc(100%-6px)_100%,0_100%)]";
+
+function ServiceCard({
+  s,
+  expanded,
+  onExpand,
+}: {
+  s: ServiceDef;
+  expanded: boolean;
+  onExpand: () => void;
+}) {
+  const navigate = useNavigate();
+  const [value, setValue] = useState("");
+  const isLinkTarget = s.id === "perusselvitys" && s.input.kind === "url";
+  const inputId = isLinkTarget ? "hero-car-link" : `card-${s.id}-input`;
+  const style = CARD_STYLES[s.id];
+  const colors = ROLE_COLORS[style.role];
+  const Icon = style.icon;
+  const detailsId = `card-${s.id}-details`;
+
+  const go = (e: React.FormEvent) => {
+    e.preventDefault();
+    const v = value.trim();
+    if (!v) {
+      navigate(s.route);
+      return;
+    }
+    const payload =
+      s.input.kind === "topic" ? { topic: v } : s.input.kind === "url" ? { carUrl: v, message: v } : { message: v };
+    const handoff = saveHandoff(s.id, payload);
+    navigate(s.route, { state: { handoff } });
+  };
+
+  const controlClass =
+    "home-service-control h-11 min-w-0 flex-1 border-0 bg-transparent text-base font-medium text-white outline-none placeholder:text-white/50";
+
+  return (
+    <form
+      onSubmit={go}
+      id={isLinkTarget ? "blocket-offer" : undefined}
+      aria-labelledby={`card-${s.id}-title`}
+      data-service-card={s.id}
+      data-card-role={style.role}
+      data-expanded={expanded ? "true" : "false"}
+      className={`group relative flex flex-col border bg-[rgba(44,51,58,0.92)] text-white ${CHAMFER_CARD} motion-safe:transition-transform motion-safe:duration-200 md:hover:-translate-y-[3px] md:hover:border-[#F27A13]/60 ${
+        expanded ? `col-span-2 md:col-span-1 ${colors.ring}` : "border-white/[0.12]"
+      }`}
+    >
+      <span aria-hidden className={`block h-[5px] w-[58%] ${colors.bar} ${CHAMFER_BAR}`} />
+
+      {/* Mobile: the compact tile itself opens the chat field */}
+      {!expanded && (
+        <button
+          type="button"
+          onClick={onExpand}
+          aria-expanded={false}
+          aria-controls={detailsId}
+          className="absolute inset-0 z-10 md:hidden focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-offset-[-3px] focus-visible:outline-[#F27A13]"
+        >
+          <span className="sr-only">Avaa {s.title}: kirjoita viesti</span>
+        </button>
+      )}
+
+      <div className="flex flex-col gap-1.5 px-3 pb-3 pt-2.5 md:gap-2 md:px-[18px] md:pb-4 md:pt-3.5">
+        <div className="flex items-center gap-2.5">
+          <span aria-hidden className={`hidden h-[34px] w-[34px] shrink-0 items-center justify-center border md:flex ${colors.tile}`}>
+            <Icon className={`h-[18px] w-[18px] ${colors.text}`} />
+          </span>
+          <span className={`text-[10px] font-extrabold uppercase tracking-[0.1em] md:text-xs md:tracking-[0.12em] ${colors.text}`}>
+            {style.eyebrow}
+          </span>
+        </div>
+        <div className="flex flex-col gap-0.5 md:flex-row md:items-baseline md:justify-between md:gap-3">
+          <h2 id={`card-${s.id}-title`} className="font-display text-base font-black uppercase leading-tight tracking-normal md:text-[22px]">
+            <Link
+              to={s.route}
+              className="text-white no-underline underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#F27A13]"
+            >
+              {s.title}
+            </Link>
+          </h2>
+          <span className={`whitespace-nowrap font-display text-lg font-black md:text-2xl ${colors.text}`}>{style.priceShort}</span>
+        </div>
+
+        <div id={detailsId} className={`${expanded ? "flex" : "hidden"} flex-col gap-2 md:flex`}>
+          <p className="m-0 text-sm leading-snug text-white/75">{style.short}</p>
+          <label htmlFor={inputId} className="sr-only">
+            {s.input.label}
+          </label>
+          <div className="mt-0.5 flex h-[52px] items-center gap-2 rounded-[10px] border border-white/[0.18] bg-[rgba(24,28,33,0.85)] py-1 pl-3 pr-1 focus-within:border-[#F27A13] focus-within:shadow-[0_0_0_3px_rgba(242,122,19,0.25)]">
+            <Bot aria-hidden className={`h-[18px] w-[18px] shrink-0 ${colors.text}`} />
+            {s.input.kind === "topic" ? (
+              <select id={inputId} value={value} onChange={(e) => setValue(e.target.value)} className={`${controlClass} [&>option]:text-[#16191D]`}>
+                <option value="">{style.placeholder}</option>
+                {s.input.options.map((o) => (
+                  <option key={o} value={o}>
+                    {o}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                id={inputId}
+                type={s.input.kind === "url" ? "url" : "text"}
+                inputMode={s.input.kind === "url" ? "url" : undefined}
+                value={value}
+                onChange={(e) => setValue(e.target.value)}
+                placeholder={style.placeholder}
+                maxLength={s.input.kind === "url" ? 500 : 1000}
+                className={controlClass}
+              />
+            )}
+            <button
+              type="submit"
+              aria-label={`Jatka: ${s.title}`}
+              className={`home-service-card__cta flex h-11 shrink-0 items-center gap-1.5 rounded-[7px] px-3.5 font-display text-sm font-extrabold uppercase tracking-[0.06em] text-[#16191D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white ${colors.send}`}
+            >
+              Jatka
+              <ArrowRight aria-hidden className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </form>
+  );
+}
+
+const TRUST: { icon: LucideIcon; text: string; className: string }[] = [
+  { icon: Star, text: "4,9 / 5 asiakkaiden arvio", className: "fill-[#F27A13] text-[#F27A13]" },
+  { icon: CarFront, text: "Yli 900 tuotua autoa", className: "text-[#22C3A6]" },
+  { icon: MapPinned, text: "Palvelu koko Suomeen", className: "text-[#22C3A6]" },
+];
+
+const ServiceCardsHero = () => {
+  const [expanded, setExpanded] = useState<ServiceId | null>(null);
+
+  return (
+    <section
+      className="relative overflow-hidden bg-[#22272D] font-display text-white"
+      aria-labelledby="services-heading"
+    >
+      <HeroVideoBackground overlayClassName="absolute inset-0 bg-[linear-gradient(180deg,rgba(34,39,45,0.55)_0%,rgba(34,39,45,0.85)_30%,#22272D_55%)] md:bg-[linear-gradient(90deg,#22272D_22%,rgba(34,39,45,0.8)_42%,rgba(34,39,45,0.25)_70%,rgba(34,39,45,0.45)_100%)]" />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 bottom-0 hidden h-[64%] bg-[linear-gradient(180deg,rgba(34,39,45,0)_0%,rgba(34,39,45,0.82)_30%,#22272D_75%)] md:block"
+      />
+
+      <div className="container relative z-10 mx-auto max-w-[1240px] px-4 pb-8 pt-[84px] sm:px-6 md:pb-10 md:pt-[100px]">
+        {/* Headline */}
+        <p className="m-0 flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[0.12em] text-[#F27A13] md:text-[13px]">
+          <ShieldCheck aria-hidden className="hidden h-4 w-4 md:block" />
+          Auton tuonti turvallisesti vuodesta 2016
+        </p>
+        <h1
+          id="services-heading"
+          className="mt-2 font-display text-[31px] font-black uppercase leading-[1.02] tracking-normal md:mt-3 md:text-[54px] md:leading-none"
+        >
+          <span className="block">Parempi auto samalla rahalla</span>
+          <span className="mt-1.5 block text-[19px] tracking-[0.03em] text-[#F27A13] md:mt-2 md:text-[30px]">
+            — Ruotsista tai Saksasta
+          </span>
+        </h1>
+        <div className="mt-2.5 flex flex-wrap items-center gap-x-6 gap-y-2 md:mt-4">
+          <p className="m-0 text-sm font-semibold text-white/90 md:text-[17px]">
+            <span className="md:hidden">Napauta tilannettasi ja kirjoita viesti heti.</span>
+            <span className="hidden md:inline">Valitse tilanteesi ja kirjoita suoraan laatikkoon.</span>
+          </p>
+          <ul className="m-0 flex list-none flex-wrap gap-x-4 gap-y-1 p-0 text-xs font-bold text-white/85 md:text-sm">
+            {TRUST.map(({ icon: TIcon, text, className }) => (
+              <li key={text} className="flex items-center gap-1.5">
+                <TIcon aria-hidden className={`h-4 w-4 ${className}`} />
+                {text}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {/* Chamfer line from the social post */}
+        <div aria-hidden className="relative my-3.5 h-3.5 md:mb-4 md:mt-[18px]">
+          <span className="absolute bottom-0 left-0 h-0.5 w-[70%] bg-[#F27A13] md:w-[61%]" />
+          <span className="absolute bottom-0 left-[61%] hidden h-0.5 w-4 origin-bottom-left -rotate-[41deg] bg-[#F27A13] md:block" />
+          <span className="absolute left-[calc(61%+12px)] right-0 top-0 hidden h-0.5 bg-[#F27A13] md:block" />
+        </div>
+
+        {/* Six boxes: 2 × 3 tiles on mobile, 3 × 2 cards on desktop */}
+        <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3 md:gap-4">
+          {SERVICES.map((s) => (
+            <ServiceCard
+              key={s.id}
+              s={s}
+              expanded={expanded === s.id}
+              onExpand={() => setExpanded(s.id)}
+            />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+};
+
+export default ServiceCardsHero;
