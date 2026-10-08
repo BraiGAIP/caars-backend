@@ -83,11 +83,11 @@ class BusinessProfile(BaseModel):
     company_name: str = "CAARS.fi"
     company_description: str = (
         "CAARS.fi on suomalainen tuontiautoliike. Tuomme premium-autoja "
-        "Saksasta ja muualta Euroopasta suomalaisille asiakkaille. "
+        "Ruotsista ja Saksasta suomalaisille asiakkaille. "
         "Hoidamme rekisteröinnin, autoveron ja kaiken paperityön asiakkaan puolesta."
     )
     tone: str = "Ammatillinen, ystävällinen, suora, suomeksi. Käytä teitittelyä jos asiakas teitittelee, muuten sinuttele."
-    signature: str = "Ystävällisin terveisin,\n{owner_name}\nCAARS.fi\n+358 40 000 0000"
+    signature: str = "Ystävällisin terveisin,\n{owner_name}\nCAARS.fi\n+358 400 600 609"
     knowledge: str = (
         "Autovero: Suomessa tuontiautoista maksetaan autovero, joka määräytyy CO2-päästöjen ja auton arvon mukaan. "
         "Rekisteröinti: Hoidamme rekisteröinnin Traficomissa asiakkaan puolesta. "
@@ -190,6 +190,37 @@ async def get_user_from_token(authorization: Optional[str]) -> User:
         raise HTTPException(status_code=401, detail="User not found")
     return User(**user_doc)
 
+CAARS_TAX_DISCLAIMER = (
+    "HUOM: Yllä oleva autovero on tekoälyn tekemä suuntaa-antava arvio, joka perustuu ilmoituksen tietoihin. "
+    "Caars ei ota vastuuta autoveroarvion oikeellisuudesta. Lopullisen ja sitovan autoveropäätöksen tekee "
+    "ja veron määrää aina Suomen Verohallinto."
+)
+
+# Appended after profile/rule text so stored (possibly stale) knowledge cannot override prices.
+CAARS_SALES_RULES = f"""PAKOLLISET CAARS-SÄÄNNÖT (ohittavat ristiriitaiset tiedot yllä):
+Vastaa käänteisen pyramidin mukaan: suora vastaus ensimmäisessä lauseessa, erittely vasta sen jälkeen.
+
+Hinnat, Ruotsi (Blocket.se, Bytbil ym.):
+- Perusselvitys 79 € (historian ja asiakirjojen dokumentoitu taustatarkistus ennen ostoa)
+- Etsintäpalvelu 79 € / Etsintäpalvelu+ 99 € (täsmäautoetsintä Ruotsin markkinoilta)
+- Tuontipalvelu (avaimet käteen) alk. 1 290 € + rahti
+- Maksupalvelu 149 € (turvallinen kansainvälinen maksunvälitys, erillinen palvelu)
+Hinnat, Saksa (Mobile.de, AutoScout24 ym.):
+- Perusselvitys ja Etsintäpalvelut koskevat VAIN Ruotsin ajoneuvoja. Älä tarjoa niitä Saksan autoille.
+- Tuontipalvelu (avaimet käteen) alk. 1 990 € + rahti, tai Maksupalvelu 149 €.
+
+Tuontikysymyksiin kuvaa aina 4 vaihetta:
+1. Taustatarkastus (Perusselvitys 79 € / Etsintä 79–99 €, Ruotsi)
+2. Hankinta, sopimukset ja turvallinen maksu (Maksupalvelu 149 €)
+3. Rahdit, tullaus ja katsastus Suomessa
+4. Avaimet käteen -toimitus kotiovelle tai Raisioon (Tuontipalvelu: Ruotsi alk. 1 290 €, Saksa alk. 1 990 €)
+
+Rahoitus tai vaihtoauto: "Kyllä, toteutamme tuontiauton kilpailutetun rahoituksen ja otamme nykyisen autosi vaihdossa kumppanimme (Autohalli.com) kautta."
+Koeajohuoli: "Viralliset dokumentoidut rekisterit (Biluppgifter/Carfax) paljastavat kolaritaustat, mittariruuvaukset ja alv-velat paremmin kuin 10 minuutin koeajo myyjän pihassa."
+Jos vastaus sisältää hinta- tai autoverolaskelman, liitä loppuun sanasta sanaan:
+"{CAARS_TAX_DISCLAIMER}"
+Yhteys: WhatsApp/puhelin +358 400 600 609 (https://wa.me/358400600609)."""
+
 CAARS_KEYWORDS = [
     "caars", "auto", "car", "tuonti", "import", "hinta", "ostaa", "myydä", "myy",
     "ajoneuvo", "merkki", "malli", "vuosimalli", "tarjous", "tilaus", "vaihto",
@@ -224,7 +255,9 @@ Erityisohjeet:
 Allekirjoitus:
 {profile.signature.replace('{owner_name}', profile.owner_name)}
 
-Vastaa AINA suomeksi. Ole lämmin, ammattimainen ja konkreettinen. Kerro lyhyesti mitä Caars.fi tekee ja pyydä asiakas ottamaan yhteyttä tai kysymään lisää."""
+Vastaa AINA suomeksi. Ole lämmin, ammattimainen ja konkreettinen. Kerro lyhyesti mitä Caars.fi tekee ja pyydä asiakas ottamaan yhteyttä tai kysymään lisää.
+
+{CAARS_SALES_RULES}"""
         user_msg = f"""Asiakas: {email_doc['sender_name']} <{email_doc['sender_email']}>
 Aihe: {email_doc['subject']}
 
@@ -446,6 +479,8 @@ Allekirjoitus käytä lopuksi:
 {profile.signature.replace('{owner_name}', profile.owner_name)}
 
 Vastaa AINA suomeksi. Pidä vastaus tiivinä, asiakaspalvelumaisena ja konkreettisena. Jos asiakkaalta puuttuu tieto (esim. vuosimalli, budjetti), kysy se kohteliaasti.
+
+{CAARS_SALES_RULES}
 """
 
     if feedback and current_draft:
