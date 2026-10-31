@@ -1,0 +1,21 @@
+--- worker-live.js	2026-10-31 13:02:39
++++ worker.js	2026-10-31 13:03:21
+@@ -405,12 +405,16 @@
+ function originRequest(request, url, ctx) {
+   const isGet = request.method === "GET";
+   const hasCookie = !!request.headers.get("cookie");
+-  const cacheable = isGet && !hasCookie;
++  const privateRoute = /^\/(?:admin|partner|api|functions|auth|rest|storage|checkout|payment|maksu|tilaa|kiitos)(?:\/|-|$)/i.test(url.pathname)
++    || /^\/market\/(?:admin|partner)(?:\/|$)/i.test(url.pathname);
++  const cacheable = isGet && !hasCookie && !request.headers.has("authorization")
++    && !url.search && !privateRoute;
+ 
+   const target = new URL(url.pathname + url.search, ORIGIN);
+   const cache = caches.default;
+   // Cache key must be a GET request; strip cookies from the key itself.
+-  const cacheKey = new Request(target.toString(), { method: "GET" });
++  // Cache API keys belong to this Worker zone, not the external Lovable host.
++  const cacheKey = new Request(url.toString(), { method: "GET" });
+ 
+   async function fetchFresh() {
+     // Force Host to match the origin hostname. Lovable's edge issues a 3xx
